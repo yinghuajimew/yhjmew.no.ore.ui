@@ -1,0 +1,32 @@
+{
+    "version": "1.7.1",
+    "versionCode": 8,
+    "forceUpdate": false,
+    "minVersion": "1.7",
+    "changelog": {
+        "zh": "\n1. 新增智能下载功能（自动测速+自动重试）\n2. 优化下载稳定性\n3. 支持多下载源无缝切换\n4. 新增版本跳过功能\n5. 支持强制更新\n6. 更新日志支持中英文\n7. 优化下载稳定性",
+        "en": "\n1. added smart download function (auto speed test + auto retry)\n2. optimized download stability\n3. support seamless switching between multiple download sources\n4. added version skip function\n5. support forced update\n6. update log support in English and Chinese\n7. optimized download stability"
+    },
+    "downloadSources": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/raw/refs/heads/main/docs/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.7_yhjmew.no.ore.ui.apk",
+            "region": "海外"
+        },
+        {
+            "name": "Cloudflare",
+            "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.7_yhjmew.no.ore.ui.apk",
+            "region": "国内外"
+        },
+        {
+            "name": "gitcode",
+            "url": "https://gitcode.com/yinghuaji/yhjmew.no.ore.ui/releases/download/1.7/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.7_yhjmew.no.ore.ui.apk",
+            "region": "国内"
+        },
+        {
+            "name": "zihao_il",
+            "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BBoreUI%E6%89%93%E5%8C%85_1.7_yhjmew.no.ore.ui.apk",
+            "region": "国内"
+        }
+    ]
+}
