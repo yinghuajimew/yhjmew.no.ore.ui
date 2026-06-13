@@ -127,34 +127,72 @@ public void checkUpdate(final UpdateCallback callback, final boolean isManual) {
     /**
      * 获取 URL 内容（类的成员方法）
      */
-    private String fetchUrl(String urlString, int timeout) throws Exception {
-        java.net.URL url = new java.net.URL(urlString);
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(timeout);
-        conn.setReadTimeout(timeout);
-        conn.setRequestProperty("User-Agent", "OreUI-Remover/" + getCurrentVersion());
+private String fetchUrl(String urlString, int timeout) throws Exception {
+    java.net.URL url = new java.net.URL(urlString);
+    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+    
+    // 设置请求方法
+    conn.setRequestMethod("GET");
+    conn.setConnectTimeout(timeout);
+    conn.setReadTimeout(timeout);
+    
+    // 模拟真实浏览器的完整请求头
+    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+    conn.setRequestProperty("Accept", "application/json, text/plain, */*");
+    conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+    conn.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
+    conn.setRequestProperty("Connection", "keep-alive");
+    conn.setRequestProperty("Cache-Control", "no-cache");
+    conn.setRequestProperty("Pragma", "no-cache");
+    
+    // 针对 GitHub Raw 的特殊处理
+    if (urlString.contains("raw.githubusercontent.com") || urlString.contains("github.com")) {
+        conn.setRequestProperty("Accept", "application/vnd.github+json");
+        conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+    }
+    
+    // 针对 GitCode 的特殊处理
+    if (urlString.contains("gitcode.com")) {
+        conn.setRequestProperty("Referer", "https://gitcode.com/");
+    }
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode == 200) {
-            java.io.InputStream is = conn.getInputStream();
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(is, "UTF-8")
-            );
-            StringBuilder result = new StringBuilder();
-            String line;
-            
-            while ((line = reader.readLine()) != null) {
-                result.append(line);
-            }
-            reader.close();
-            conn.disconnect();
-            return result.toString();
+    int responseCode = conn.getResponseCode();
+    
+    // 处理重定向（301, 302, 307, 308）
+    if (responseCode == java.net.HttpURLConnection.HTTP_MOVED_PERM || 
+        responseCode == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
+        responseCode == 307 || responseCode == 308) {
+        String newUrl = conn.getHeaderField("Location");
+        conn.disconnect();
+        return fetchUrl(newUrl, timeout);  // 递归处理重定向
+    }
+    
+    if (responseCode == 200) {
+        java.io.InputStream is = conn.getInputStream();
+        
+        // 处理 Gzip 压缩
+        String encoding = conn.getContentEncoding();
+        if ("gzip".equalsIgnoreCase(encoding)) {
+            is = new java.util.zip.GZIPInputStream(is);
         }
         
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(is, "UTF-8")
+        );
+        StringBuilder result = new StringBuilder();
+        String line;
+        
+        while ((line = reader.readLine()) != null) {
+            result.append(line);
+        }
+        reader.close();
         conn.disconnect();
-        return null;
+        return result.toString();
     }
+    
+    conn.disconnect();
+    return null;
+}
 
 // 保留旧方法签名，兼容性
 public void checkUpdate(final UpdateCallback callback) {
@@ -554,123 +592,150 @@ private void notifyForceUpdate(final String newVersion, final String currentVers
     /**
      * 测速：测试所有下载源的响应时间
      */
-    private List<SourceWithSpeed> testSourcesSpeed(List<DownloadSource> sources) {
-        List<SourceWithSpeed> results = new ArrayList<SourceWithSpeed>();
-        
-        for (DownloadSource source : sources) {
-            try {
-                long startTime = System.currentTimeMillis();
-                
-                java.net.URL url = new java.net.URL(source.url);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("HEAD");  // 只获取头部，不下载文件
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-                conn.setRequestProperty("User-Agent", "OreUI-Remover/" + getCurrentVersion());
-                
-                int responseCode = conn.getResponseCode();
-                long elapsedTime = System.currentTimeMillis() - startTime;
-                conn.disconnect();
-                
-                if (responseCode == 200 || responseCode == 302) {
-                    results.add(new SourceWithSpeed(source, elapsedTime));
-                    notifyLog("✅ " + source.name + " 可用 (响应: " + elapsedTime + "ms)");
-                } else {
-                    notifyLog("⚠️ " + source.name + " 返回错误: " + responseCode);
-                }
-                
-            } catch (Exception e) {
-                notifyLog("❌ " + source.name + " 连接失败: " + e.getMessage());
+private List<SourceWithSpeed> testSourcesSpeed(List<DownloadSource> sources) {
+    List<SourceWithSpeed> results = new ArrayList<SourceWithSpeed>();
+    
+    for (DownloadSource source : sources) {
+        try {
+            long startTime = System.currentTimeMillis();
+            
+            java.net.URL url = new java.net.URL(source.url);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("HEAD");  // 只获取头部
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            
+            // 完整的请求头
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+            conn.setRequestProperty("Accept", "*/*");
+            conn.setRequestProperty("Connection", "close");
+            
+            int responseCode = conn.getResponseCode();
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            conn.disconnect();
+            
+            if (responseCode == 200 || responseCode == 302 || responseCode == 301) {
+                results.add(new SourceWithSpeed(source, elapsedTime));
+                notifyLog("✅ " + source.name + " 可用 (响应: " + elapsedTime + "ms)");
+            } else {
+                notifyLog("⚠️ " + source.name + " 返回错误: " + responseCode);
             }
+            
+        } catch (Exception e) {
+            notifyLog("❌ " + source.name + " 连接失败: " + e.getMessage());
         }
-        
-        // 按响应时间排序（从快到慢）
-        java.util.Collections.sort(results, new java.util.Comparator<SourceWithSpeed>() {
-            @Override
-            public int compare(SourceWithSpeed s1, SourceWithSpeed s2) {
-                return Long.compare(s1.responseTime, s2.responseTime);
-            }
-        });
-        
-        return results;
     }
+    
+    // 按响应时间排序
+    java.util.Collections.sort(results, new java.util.Comparator<SourceWithSpeed>() {
+        @Override
+        public int compare(SourceWithSpeed s1, SourceWithSpeed s2) {
+            return Long.compare(s1.responseTime, s2.responseTime);
+        }
+    });
+    
+    return results;
+}
 
     /**
-     * 内部下载方法（返回是否成功）
-     */
-    private boolean downloadApkInternal(String downloadUrl, String fileName) throws Exception {
-        File downloadDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "updates");
-        if (!downloadDir.exists()) {
-            downloadDir.mkdirs();
-        }
-        
-        File apkFile = new File(downloadDir, fileName);
-        if (apkFile.exists()) {
-            apkFile.delete();
-        }
-
-        java.net.URL url = new java.net.URL(downloadUrl);
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(15000);
-        conn.setReadTimeout(30000);
-        conn.setRequestProperty("User-Agent", "OreUI-Remover/" + getCurrentVersion());
-
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200 && responseCode != 302) {
-            conn.disconnect();
-            throw new Exception("服务器返回错误: " + responseCode);
-        }
-
-        // 处理重定向
-        if (responseCode == 302) {
-            String newUrl = conn.getHeaderField("Location");
-            conn.disconnect();
-            conn = (java.net.HttpURLConnection) new java.net.URL(newUrl).openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("User-Agent", "OreUI-Remover/" + getCurrentVersion());
-        }
-
-        int fileLength = conn.getContentLength();
-        InputStream is = conn.getInputStream();
-        FileOutputStream fos = new FileOutputStream(apkFile);
-
-        showDownloadNotification(0, fileLength);
-
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-        int totalBytesRead = 0;
-        long lastUpdateTime = 0;
-
-        while ((bytesRead = is.read(buffer)) != -1) {
-            fos.write(buffer, 0, bytesRead);
-            totalBytesRead += bytesRead;
-
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastUpdateTime > 500) {
-                notifyDownloadProgress(totalBytesRead, fileLength);
-                updateDownloadNotification(totalBytesRead, fileLength);
-                lastUpdateTime = currentTime;
-            }
-        }
-
-        fos.flush();
-        fos.close();
-        is.close();
-        conn.disconnect();
-
-        // 验证文件是否完整
-        if (apkFile.length() == 0) {
-            apkFile.delete();
-            throw new Exception("下载的文件大小为 0");
-        }
-
-        cancelNotification();
-        notifyDownloadComplete(apkFile);
-        return true;
+ * 内部下载方法（优化请求头）
+ */
+private boolean downloadApkInternal(String downloadUrl, String fileName) throws Exception {
+    File downloadDir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "updates");
+    if (!downloadDir.exists()) {
+        downloadDir.mkdirs();
+    }
+    
+    File apkFile = new File(downloadDir, fileName);
+    if (apkFile.exists()) {
+        apkFile.delete();
     }
 
-    // ... 保持原有的其他方法 ...
+    java.net.URL url = new java.net.URL(downloadUrl);
+    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("GET");
+    conn.setConnectTimeout(15000);
+    conn.setReadTimeout(30000);
+    
+    // 完整的请求头（模拟浏览器）
+    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+    conn.setRequestProperty("Accept", "*/*");
+    conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
+    conn.setRequestProperty("Connection", "keep-alive");
+    conn.setRequestProperty("Range", "bytes=0-");  // 支持断点续传
+    
+    // 针对特定平台优化
+    if (downloadUrl.contains("github.com")) {
+        conn.setRequestProperty("Accept", "application/octet-stream");
+    }
+
+    int responseCode = conn.getResponseCode();
+    
+    // 处理重定向
+    if (responseCode == java.net.HttpURLConnection.HTTP_MOVED_PERM || 
+        responseCode == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
+        responseCode == 307 || responseCode == 308) {
+        String newUrl = conn.getHeaderField("Location");
+        conn.disconnect();
+        notifyLog("🔄 重定向到: " + newUrl);
+        return downloadApkInternal(newUrl, fileName);
+    }
+    
+    if (responseCode != 200 && responseCode != 206) {  // 206 是部分内容（Range 请求）
+        conn.disconnect();
+        throw new Exception("服务器返回错误: " + responseCode);
+    }
+
+    int fileLength = conn.getContentLength();
+    java.io.InputStream is = conn.getInputStream();
+    
+    // 处理 Gzip 压缩（某些服务器可能压缩传输）
+    String encoding = conn.getContentEncoding();
+    if ("gzip".equalsIgnoreCase(encoding)) {
+        is = new java.util.zip.GZIPInputStream(is);
+    }
+    
+    java.io.FileOutputStream fos = new java.io.FileOutputStream(apkFile);
+
+    showDownloadNotification(0, fileLength);
+
+    byte[] buffer = new byte[8192];
+    int bytesRead;
+    int totalBytesRead = 0;
+    long lastUpdateTime = 0;
+
+    while ((bytesRead = is.read(buffer)) != -1) {
+        fos.write(buffer, 0, bytesRead);
+        totalBytesRead += bytesRead;
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUpdateTime > 500) {
+            notifyDownloadProgress(totalBytesRead, fileLength);
+            updateDownloadNotification(totalBytesRead, fileLength);
+            lastUpdateTime = currentTime;
+        }
+    }
+
+    fos.flush();
+    fos.close();
+    is.close();
+    conn.disconnect();
+
+    // 验证文件完整性
+    if (apkFile.length() == 0) {
+        apkFile.delete();
+        throw new Exception("下载的文件大小为 0");
+    }
+    
+    if (fileLength > 0 && apkFile.length() < fileLength * 0.9) {
+        apkFile.delete();
+        throw new Exception("下载不完整，预期 " + fileLength + " 字节，实际 " + apkFile.length() + " 字节");
+    }
+
+    cancelNotification();
+    notifyDownloadComplete(apkFile);
+    return true;
+}
 
     // 新增：通知日志
     private void notifyLog(final String message) {
