@@ -183,7 +183,7 @@ public class MainActivity extends Activity {
 
         if (pendingInstallApk != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (getPackageManager().canRequestPackageInstalls()) {
-                printLog("✅ 已获得安装权限，正在安装...");
+                printLog(getString(R.string.obtained_installation_permission_installing));
                 if (updateManager != null) {
                     updateManager.installApk(pendingInstallApk);
                 }
@@ -903,7 +903,7 @@ public class MainActivity extends Activity {
     container.setPadding(padding, padding, padding, padding);
 
     android.widget.TextView tvVersion = new android.widget.TextView(this);
-    tvVersion.setText("发现新版本: " + newVersion);
+    tvVersion.setText(getString(R.string.new_version_found) + newVersion);
     tvVersion.setTextSize(16f);
     tvVersion.setTextColor(android.graphics.Color.parseColor("#000000"));
     tvVersion.setPadding(0, 0, 0, 15);
@@ -912,7 +912,7 @@ public class MainActivity extends Activity {
     // 显示跳过状态
     if (isVersionSkipped(newVersion)) {
         android.widget.TextView tvSkipped = new android.widget.TextView(this);
-        tvSkipped.setText("⏭️ 您之前已跳过此版本");
+        tvSkipped.setText(getString(R.string.you_have_skipped_this_version_before));
         tvSkipped.setTextSize(13f);
         tvSkipped.setTextColor(android.graphics.Color.parseColor("#FF9800"));
         tvSkipped.setPadding(0, 0, 0, 10);
@@ -922,7 +922,7 @@ public class MainActivity extends Activity {
     // 强制更新标签
     if (forceUpdate) {
         android.widget.TextView tvForce = new android.widget.TextView(this);
-        tvForce.setText("⚠️ 此版本为强制更新");
+        tvForce.setText(getString(R.string.this_version_is_a_mandatory_update));
         tvForce.setTextSize(14f);
         tvForce.setTextColor(android.graphics.Color.parseColor("#FF5722"));
         tvForce.setPadding(0, 0, 0, 10);
@@ -930,26 +930,26 @@ public class MainActivity extends Activity {
     }
 
     android.widget.TextView tvChangelog = new android.widget.TextView(this);
-    tvChangelog.setText("更新内容:\n" + changelog);
+    tvChangelog.setText(getString(R.string.update_contentn) + changelog);
     tvChangelog.setTextSize(14f);
     tvChangelog.setTextColor(android.graphics.Color.parseColor("#666666"));
     tvChangelog.setPadding(0, 0, 0, 20);
     container.addView(tvChangelog);
 
     android.widget.TextView tvSourceInfo = new android.widget.TextView(this);
-    tvSourceInfo.setText("📡 共有 " + sources.size() + " 个下载源可用");
+    tvSourceInfo.setText(getString(R.string.shared) + sources.size() + getString(R.string.download_sources_available));
     tvSourceInfo.setTextSize(13f);
     tvSourceInfo.setTextColor(android.graphics.Color.parseColor("#999999"));
     container.addView(tvSourceInfo);
 
     android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this)
-            .setTitle("🎉 新版本可用")
+            .setTitle(getString(R.string.new_version_available))
             .setView(container)
-            .setPositiveButton("立即下载", new android.content.DialogInterface.OnClickListener() {
+            .setPositiveButton(getString(R.string.download_now), new android.content.DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(android.content.DialogInterface dialog, int which) {
                     clearSkippedVersion();  // 清除跳过记录
-                    printLog("🚀 开始智能下载...");
+                    printLog(getString(R.string.start_smart_download));
                     if (updateManager != null) {
                         updateManager.smartDownload(sources, "update_" + newVersion + ".apk");
                     }
@@ -959,8 +959,8 @@ public class MainActivity extends Activity {
     if (forceUpdate) {
         builder.setCancelable(false);
     } else {
-        builder.setNegativeButton("稍后提醒", null);
-        builder.setNeutralButton("跳过此版本", new android.content.DialogInterface.OnClickListener() {
+        builder.setNegativeButton(getString(R.string.reminder_later), null);
+        builder.setNeutralButton(getString(R.string.skip_this_version), new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface dialog, int which) {
                 skipVersion(newVersion);
@@ -986,13 +986,13 @@ private void checkForUpdates(final boolean isManual) {
         public void onUpdateAvailable(String newVersion, List<UpdateManager.DownloadSource> sources, String changelog, boolean forceUpdate, boolean isManualCheck) {
             // 自动检查时，检查是否跳过了此版本
             if (!isManualCheck && !forceUpdate && isVersionSkipped(newVersion)) {
-                printLog("⏭️ 已跳过版本 " + newVersion + "（自动检查）");
+                printLog(getString(R.string.version_skipped) + newVersion + getString(R.string.automatic_check));
                 return;
             }
             
             // 手动检查或未跳过，显示更新对话框
             if (isManualCheck && isVersionSkipped(newVersion)) {
-                printLog("🔍 手动检查：显示已跳过的版本 " + newVersion);
+                printLog(getString(R.string.manual_inspection_show_skipped_versions) + newVersion);
             }
             
             showUpdateDialog(newVersion, sources, changelog, forceUpdate);
@@ -1002,18 +1002,18 @@ private void checkForUpdates(final boolean isManual) {
         public void onNoUpdate() {
             if (isManual) {
                 // 手动检查时，显示提示
-                showToast("✅ 当前已是最新版本");
+                showToast(getString(R.string.it_is_currently_the_latest_version));
             }
-            printLog("✅ 当前已是最新版本");
+            printLog(getString(R.string.it_is_currently_the_latest_version));
         }
 
         @Override
         public void onCheckError(String error) {
             if (isManual) {
                 // 手动检查时，显示错误提示
-                showToast("⚠️ 更新检查失败: " + error);
+                showToast(getString(R.string.update_check_failed) + error);
             }
-            printLog("⚠️ 更新检查失败: " + error);
+            printLog(getString(R.string.update_check_failed) + error);
         }
 
         @Override
@@ -1061,7 +1061,7 @@ private void checkForUpdates() {
     private void showDownloadProgress() {
         downloadProgressDialog = new android.app.ProgressDialog(this);
         downloadProgressDialog.setTitle(getString(R.string.downloading));
-        downloadProgressDialog.setMessage("准备下载...");
+        downloadProgressDialog.setMessage(getString(R.string.ready_to_download));
         downloadProgressDialog.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
         downloadProgressDialog.setCancelable(false);
         downloadProgressDialog.setMax(100);
@@ -1074,7 +1074,7 @@ private void checkForUpdates() {
             downloadProgressDialog.setProgress(progress);
 
             int percent = max > 0 ? (int) ((progress * 100.0f) / max) : 0;
-            downloadProgressDialog.setMessage("已下载 " + percent + "% (" +
+            downloadProgressDialog.setMessage(getString(R.string.downloaded) + percent + "% (" +
                     formatFileSize(progress) + " / " + formatFileSize(max) + ")");
         }
     }
@@ -1091,9 +1091,9 @@ private void checkForUpdates() {
             if (!getPackageManager().canRequestPackageInstalls()) {
                 // 没有权限，先弹出引导对话框
                 new android.app.AlertDialog.Builder(this)
-                        .setTitle("⚠️ 需要安装权限")
-                        .setMessage("应用需要\"安装未知应用\"权限才能安装更新。\n\n授权后请返回，对话框会自动关闭并开始安装。")
-                        .setPositiveButton("去授权", new android.content.DialogInterface.OnClickListener() {
+                        .setTitle(getString(R.string.requires_installation_permissions))
+                        .setMessage(getString(R.string.the_app_requires_the_install_unknown_app_permissio))
+                        .setPositiveButton(getString(R.string.to_authorize), new android.content.DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(android.content.DialogInterface dialog, int which) {
                                 pendingInstallApk = apkFile; // 记录待安装文件
@@ -1102,7 +1102,7 @@ private void checkForUpdates() {
                                 startActivity(intent);
                             }
                         })
-                        .setNegativeButton("取消", null)
+                        .setNegativeButton(getString(R.string.cancel), null)
                         .show();
                 return;
             }
@@ -1110,8 +1110,8 @@ private void checkForUpdates() {
 
         // 有权限，直接显示安装对话框
         new android.app.AlertDialog.Builder(this)
-                .setTitle("✅ 下载完成")
-                .setMessage("更新包已下载完成，是否立即安装？")
+                .setTitle(getString(R.string.download_completed))
+                .setMessage(getString(R.string.the_update_package_has_been_downloaded_do_you_want))
                 .setPositiveButton(getString(R.string.install_now), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
@@ -1152,7 +1152,7 @@ private void checkForUpdates() {
         android.content.SharedPreferences.Editor editor = prefs.edit();
         editor.putString("skipped_version", version);
         editor.apply();
-        printLog("⏭️ 已跳过版本: " + version);
+        printLog(getString(R.string.skipped_version) + version);
     }
 
 /** 清除跳过的版本记录 */
@@ -1171,7 +1171,7 @@ private void checkForUpdates() {
         container.setPadding(padding, padding, padding, padding);
 
         android.widget.TextView tvTitle = new android.widget.TextView(this);
-        tvTitle.setText("⚠️ 必须更新");
+        tvTitle.setText(getString(R.string.must_update));
         tvTitle.setTextSize(18f);
         tvTitle.setTextColor(android.graphics.Color.parseColor("#FF5722"));
         tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -1179,21 +1179,21 @@ private void checkForUpdates() {
         container.addView(tvTitle);
 
         android.widget.TextView tvMessage = new android.widget.TextView(this);
-        tvMessage.setText("您当前的版本过低，必须更新才能继续使用。\n\n" +
-                "当前版本: " + currentVersion + "\n" +
-                "最低版本: " + minVersion + "\n" +
-                "最新版本: " + newVersion + "\n\n" +
-                "更新内容:\n" + changelog);
+        tvMessage.setText(getString(R.string.your_current_version_is_too_old_and_must_be_update) +
+                getString(R.string.current_version) + currentVersion + "\n" +
+                getString(R.string.minimum_version) + minVersion + "\n" +
+                getString(R.string.latest_version) + newVersion + "\n\n" +
+                getString(R.string.update_contentn) + changelog);
         tvMessage.setTextSize(14f);
         tvMessage.setTextColor(android.graphics.Color.parseColor("#333333"));
         container.addView(tvMessage);
 
         new android.app.AlertDialog.Builder(this)
                 .setView(container)
-                .setPositiveButton("立即更新", new android.content.DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.update_now), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
-                        printLog("🚀 强制更新：开始下载...");
+                        printLog(getString(R.string.forced_update_start_downloading));
                         if (updateManager != null) {
                             updateManager.smartDownload(sources, "update_" + newVersion + ".apk");
                         }

@@ -30,8 +30,9 @@ import okhttp3.Response;
 public class UpdateManager {
 
     private static final String[] UPDATE_CHECK_URLS = {
-            "https://raw.githubusercontent.com/yinghuajimew/yhjmew.no.ore.ui/refs/heads/main/docs/update.json",
-            "https://yhjmew-no-ore-ui.pages.dev/update.json"
+            "https://yhjmew-no-ore-ui.pages.dev/update.json",// Cloudflare
+            "https://bbk.endyun.ltd/no-ore-ui/update.json",// zihao_il
+            "https://raw.githubusercontent.com/yinghuajimew/yhjmew.no.ore.ui/refs/heads/main/docs/update.json"// GitHub
     };
 
     private static final String NOTIFICATION_CHANNEL_ID = "update_download";
@@ -86,10 +87,10 @@ public class UpdateManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     NOTIFICATION_CHANNEL_ID,
-                    "应用更新下载",
+                    context.getString(R.string.app_update_download),
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("显示应用更新下载进度");
+            channel.setDescription(context.getString(R.string.show_app_update_download_progress));
             notificationManager.createNotificationChannel(channel);
         }
     }
@@ -100,98 +101,169 @@ public class UpdateManager {
  * @param isManual 是否为手动检查（true=手动，false=自动）
  */
 public void checkUpdate(final UpdateCallback callback, final boolean isManual) {
-        this.callback = callback;
+    this.callback = callback;
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String currentVersion = getCurrentVersion();
-                
-                for (String checkUrl : UPDATE_CHECK_URLS) {
-                    try {
-                        String json = fetchUrl(checkUrl, 10000);  // ← 这里应该能访问
-                        if (json != null && json.length() > 0) {
-                            parseUpdateResponse(json, currentVersion, isManual);
-                            return;
-                        }
-                    } catch (Exception e) {
-                        // 继续尝试下一个源
+    new Thread(new Runnable() {
+        @Override
+        public void run() {
+            String currentVersion = getCurrentVersion();
+            
+            notifyLog(context.getString(R.string.shared) + UPDATE_CHECK_URLS.length + context.getString(R.string.update_sources));
+            
+            for (int i = 0; i < UPDATE_CHECK_URLS.length; i++) {
+                String checkUrl = UPDATE_CHECK_URLS[i];
+                try {
+                    notifyLog(context.getString(R.string.try_the_source) + (i + 1) + "/" + UPDATE_CHECK_URLS.length + ": " + getDomainName(checkUrl));
+                    
+                    String json = fetchUrl(checkUrl, 10000);
+                    if (json != null && json.length() > 0) {
+                        notifyLog(context.getString(R.string.from) + getDomainName(checkUrl) + context.getString(R.string.obtain_updated_information_successfully));
+                        parseUpdateResponse(json, currentVersion, isManual);
+                        return;
+                    }
+                } catch (Exception e) {
+                    notifyLog(context.getString(R.string.source) + (i + 1) + context.getString(R.string.fail) + e.getMessage());
+                    
+                    if (i < UPDATE_CHECK_URLS.length - 1) {
+                        notifyLog(context.getString(R.string.switch_to_next_source));
                     }
                 }
-                
-                notifyError("无法连接到更新服务器，请检查网络连接");
             }
-        }).start();
+            
+            notifyError(context.getString(R.string.all_update_sources_are_inaccessible_total) + UPDATE_CHECK_URLS.length + context.getString(R.string.sources));
+        }
+    }).start();
+}
+
+/**
+ * 从 URL 提取域名
+ */
+private String getDomainName(String url) {
+    try {
+        java.net.URL u = new java.net.URL(url);
+        return u.getHost();
+    } catch (Exception e) {
+        return url;
     }
+}
 
     /**
      * 获取 URL 内容（类的成员方法）
      */
 private String fetchUrl(String urlString, int timeout) throws Exception {
+    notifyLog(context.getString(R.string.requesting) + getDomainName(urlString));
+    
     java.net.URL url = new java.net.URL(urlString);
     java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
     
-    // 设置请求方法
     conn.setRequestMethod("GET");
     conn.setConnectTimeout(timeout);
     conn.setReadTimeout(timeout);
+    conn.setInstanceFollowRedirects(true);  // ← 自动跟随重定向
     
-    // 模拟真实浏览器的完整请求头
+    // 完整的请求头
     conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
     conn.setRequestProperty("Accept", "application/json, text/plain, */*");
     conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8");
-    conn.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
-    conn.setRequestProperty("Connection", "keep-alive");
+    conn.setRequestProperty("Accept-Encoding", "identity");  // ← 不要压缩，避免解压问题
+    conn.setRequestProperty("Connection", "close");
     conn.setRequestProperty("Cache-Control", "no-cache");
-    conn.setRequestProperty("Pragma", "no-cache");
     
-    // 针对 GitHub Raw 的特殊处理
-    if (urlString.contains("raw.githubusercontent.com") || urlString.contains("github.com")) {
-        conn.setRequestProperty("Accept", "application/vnd.github+json");
-        conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
-    }
-    
-    // 针对 GitCode 的特殊处理
-    if (urlString.contains("gitcode.com")) {
-        conn.setRequestProperty("Referer", "https://gitcode.com/");
+    // 针对不同平台
+    if (urlString.contains("pages.dev")) {
+        conn.setRequestProperty("Origin", "https://" + url.getHost());
+    } else if (urlString.contains("raw.githubusercontent.com")) {
+        conn.setRequestProperty("Accept", "text/plain");
     }
 
     int responseCode = conn.getResponseCode();
+    notifyLog(context.getString(R.string.response_code) + responseCode);
     
-    // 处理重定向（301, 302, 307, 308）
-    if (responseCode == java.net.HttpURLConnection.HTTP_MOVED_PERM || 
-        responseCode == java.net.HttpURLConnection.HTTP_MOVED_TEMP ||
-        responseCode == 307 || responseCode == 308) {
+    // 处理重定向（虽然已设置自动跟随，但有些服务器需要手动处理）
+    if (responseCode >= 300 && responseCode < 400) {
         String newUrl = conn.getHeaderField("Location");
         conn.disconnect();
-        return fetchUrl(newUrl, timeout);  // 递归处理重定向
+        notifyLog(context.getString(R.string.redirect_to) + newUrl);
+        return fetchUrl(newUrl, timeout);
     }
     
     if (responseCode == 200) {
+        // 检查 Content-Type
+        String contentType = conn.getContentType();
+        notifyLog(context.getString(R.string.contenttype) + (contentType != null ? contentType : "null"));
+        
+        // 检查 Content-Length
+        int contentLength = conn.getContentLength();
+        notifyLog(context.getString(R.string.contentlength) + contentLength);
+        
+        // 如果返回的是 HTML，说明有问题
+        if (contentType != null && contentType.toLowerCase().contains("text/html")) {
+            conn.disconnect();
+            throw new Exception(context.getString(R.string.server_returns_html_instead_of_json_contenttype) + contentType + ")");
+        }
+        
         java.io.InputStream is = conn.getInputStream();
         
-        // 处理 Gzip 压缩
-        String encoding = conn.getContentEncoding();
-        if ("gzip".equalsIgnoreCase(encoding)) {
-            is = new java.util.zip.GZIPInputStream(is);
+        // 不处理压缩，直接读取原始内容
+        // （因为我们在请求头中设置了 Accept-Encoding: identity）
+        
+        // 使用 ByteArrayOutputStream 先读取全部内容
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        
+        while ((bytesRead = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, bytesRead);
         }
         
-        java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(is, "UTF-8")
-        );
-        StringBuilder result = new StringBuilder();
-        String line;
-        
-        while ((line = reader.readLine()) != null) {
-            result.append(line);
-        }
-        reader.close();
+        is.close();
         conn.disconnect();
-        return result.toString();
+        
+        byte[] responseBytes = baos.toByteArray();
+        notifyLog(context.getString(R.string.actual_reading) + responseBytes.length + context.getString(R.string.byte_1));
+        
+        // 检查是否为空
+        if (responseBytes.length == 0) {
+            throw new Exception(context.getString(R.string.server_returns_empty_content));
+        }
+        
+        // 尝试 UTF-8 解码
+        String response;
+        try {
+            response = new String(responseBytes, "UTF-8");
+        } catch (Exception e) {
+            notifyLog(context.getString(R.string.utf8_decoding_failed_try_gbk));
+            try {
+                response = new String(responseBytes, "GBK");
+            } catch (Exception e2) {
+                throw new Exception(context.getString(R.string.unable_to_decode_response_content_tried_utf8_and_g));
+            }
+        }
+        
+        // 去除 BOM 和空白字符
+        response = response.trim();
+        if (response.startsWith("\uFEFF")) {
+            response = response.substring(1);
+        }
+        
+        notifyLog(context.getString(R.string.response_preview_first_100_characters) + response.substring(0, Math.min(100, response.length())));
+        
+        // 验证是否为 JSON
+        if (!response.startsWith("{") && !response.startsWith("[")) {
+            throw new Exception(context.getString(R.string.the_returned_content_is_not_in_json_format_startin) + response.substring(0, Math.min(50, response.length())));
+        }
+        
+        return response;
+    } else if (responseCode == 404) {
+        conn.disconnect();
+        throw new Exception(context.getString(R.string.file_does_not_exist_404));
+    } else if (responseCode == 403) {
+        conn.disconnect();
+        throw new Exception(context.getString(R.string.access_denied_403));
+    } else {
+        conn.disconnect();
+        throw new Exception(context.getString(R.string.http) + responseCode);
     }
-    
-    conn.disconnect();
-    return null;
 }
 
 // 保留旧方法签名，兼容性
@@ -223,7 +295,7 @@ public void checkUpdate(final UpdateCallback callback) {
 
                     if (!response.isSuccessful()) {
                         response.close();
-                        notifyDownloadError("下载失败，服务器返回: " + response.code());
+                        notifyDownloadError(context.getString(R.string.the_download_failed_and_the_server_returned) + response.code());
                         return;
                     }
 
@@ -260,7 +332,7 @@ public void checkUpdate(final UpdateCallback callback) {
 
                 } catch (Exception e) {
                     cancelNotification();
-                    notifyDownloadError("下载失败: " + e.getMessage());
+                    notifyDownloadError(context.getString(R.string.download_failed) + e.getMessage());
                 }
             }
         }).start();
@@ -280,12 +352,12 @@ public void checkUpdate(final UpdateCallback callback) {
         if (changelogObj != null) {
             String lang = java.util.Locale.getDefault().getLanguage();
             if ("zh".equals(lang)) {
-                changelog = changelogObj.optString("zh", changelogObj.optString("en", "暂无更新说明"));
+                changelog = changelogObj.optString("zh", changelogObj.optString("en", context.getString(R.string.no_update_instructions_yet)));
             } else {
-                changelog = changelogObj.optString("en", changelogObj.optString("zh", "No changelog available"));
+                changelog = changelogObj.optString("en", changelogObj.optString("zh", context.getString(R.string.no_changelog_available)));
             }
         } else {
-            changelog = root.optString("changelog", "暂无更新说明");
+            changelog = root.optString("changelog", context.getString(R.string.no_update_instructions_yet));
         }
         
         // 解析下载源
@@ -315,7 +387,7 @@ public void checkUpdate(final UpdateCallback callback) {
         }
 
     } catch (Exception e) {
-        notifyError("解析更新信息失败: " + e.getMessage());
+        notifyError(context.getString(R.string.failed_to_parse_update_information) + e.getMessage());
     }
 }
 
@@ -346,19 +418,19 @@ private boolean isVersionLowerThan(String current, String min) {
 
     public void installApk(File apkFile) {
     try {
-        notifyLog("=== 开始安装 ===");
+        notifyLog(context.getString(R.string.start_installation));
         
         if (!apkFile.exists()) {
-            notifyDownloadError("APK 文件不存在");
+            notifyDownloadError(context.getString(R.string.apk_file_does_not_exist));
             return;
         }
 
-        notifyLog("📦 文件: " + apkFile.getName() + " (" + (apkFile.length() / 1024 / 1024) + " MB)");
+        notifyLog(context.getString(R.string.file) + apkFile.getName() + " (" + (apkFile.length() / 1024 / 1024) + " MB)");
 
         // Android 8.0+ 检查安装权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!context.getPackageManager().canRequestPackageInstalls()) {
-                notifyLog("⚠️ 需要安装权限，正在跳转设置...");
+                notifyLog(context.getString(R.string.requires_installation_permission_jumping_to_settin));
                 Intent permIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                 permIntent.setData(android.net.Uri.parse("package:" + context.getPackageName()));
                 permIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -385,19 +457,19 @@ private boolean isVersionLowerThan(String current, String min) {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         context.startActivity(intent);
-        notifyLog("✅ 已调起安装界面");
+        notifyLog(context.getString(R.string.the_installation_interface_has_been_launched));
 
     } catch (Exception e) {
-        notifyDownloadError("安装失败: " + e.getMessage());
-        notifyLog("详情: " + android.util.Log.getStackTraceString(e));
+        notifyDownloadError(context.getString(R.string.installation_failed) + e.getMessage());
+        notifyLog(context.getString(R.string.details) + android.util.Log.getStackTraceString(e));
     }
 }
 
     private void showDownloadNotification(int progress, int max) {
         notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle("正在下载更新")
-                .setContentText("准备下载...")
+                .setContentTitle(context.getString(R.string.downloading_updates))
+                .setContentText(context.getString(R.string.ready_to_download))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true);
 
@@ -415,7 +487,7 @@ private boolean isVersionLowerThan(String current, String min) {
             int percent = (int) ((progress * 100.0f) / max);
             notificationBuilder
                     .setProgress(max, progress, false)
-                    .setContentText("已下载 " + percent + "%");
+                    .setContentText(context.getString(R.string.downloaded) + percent + "%");
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
         }
     }
@@ -550,13 +622,13 @@ private void notifyForceUpdate(final String newVersion, final String currentVers
         new Thread(new Runnable() {
             @Override
             public void run() {
-                notifyLog("🔍 正在测速，寻找最快的下载源...");
+                notifyLog(context.getString(R.string.testing_speed_looking_for_the_fastest_download_sou));
                 
                 // 第一步：测速，找到可用且最快的源
                 List<SourceWithSpeed> availableSources = testSourcesSpeed(sources);
                 
                 if (availableSources.isEmpty()) {
-                    notifyDownloadError("所有下载源均不可用，请检查网络连接");
+                    notifyDownloadError(context.getString(R.string.all_download_sources_are_unavailable_please_check_));
                     return;
                 }
                 
@@ -566,22 +638,22 @@ private void notifyForceUpdate(final String newVersion, final String currentVers
                     DownloadSource source = sourceWithSpeed.source;
                     
                     try {
-                        notifyLog("📥 正在从 " + source.name + " 下载... (响应时间: " + sourceWithSpeed.responseTime + "ms)");
+                        notifyLog(context.getString(R.string.receiving_from) + source.name + context.getString(R.string.download_response_time) + sourceWithSpeed.responseTime + "ms)");
                         
                         boolean success = downloadApkInternal(source.url, fileName);
                         
                         if (success) {
-                            notifyLog("✅ 从 " + source.name + " 下载成功！");
+                            notifyLog(context.getString(R.string.from) + source.name + context.getString(R.string.download_successful));
                             return;
                         }
                     } catch (Exception e) {
-                        notifyLog("❌ " + source.name + " 下载失败: " + e.getMessage());
+                        notifyLog("❌ " + source.name + context.getString(R.string.download_failed) + e.getMessage());
                         
                         // 如果还有其他源，继续尝试
                         if (i < availableSources.size() - 1) {
-                            notifyLog("⚠️ 正在切换到备用下载源...");
+                            notifyLog(context.getString(R.string.switching_to_alternate_download_source));
                         } else {
-                            notifyDownloadError("所有下载源均尝试失败，请稍后重试");
+                            notifyDownloadError(context.getString(R.string.all_attempts_to_download_sources_failed_please_try));
                         }
                     }
                 }
@@ -616,13 +688,13 @@ private List<SourceWithSpeed> testSourcesSpeed(List<DownloadSource> sources) {
             
             if (responseCode == 200 || responseCode == 302 || responseCode == 301) {
                 results.add(new SourceWithSpeed(source, elapsedTime));
-                notifyLog("✅ " + source.name + " 可用 (响应: " + elapsedTime + "ms)");
+                notifyLog("✅ " + source.name + context.getString(R.string.available_response) + elapsedTime + "ms)");
             } else {
-                notifyLog("⚠️ " + source.name + " 返回错误: " + responseCode);
+                notifyLog("⚠️ " + source.name + context.getString(R.string.return_error) + responseCode);
             }
             
         } catch (Exception e) {
-            notifyLog("❌ " + source.name + " 连接失败: " + e.getMessage());
+            notifyLog("❌ " + source.name + context.getString(R.string.connection_failed) + e.getMessage());
         }
     }
     
@@ -677,13 +749,13 @@ private boolean downloadApkInternal(String downloadUrl, String fileName) throws 
         responseCode == 307 || responseCode == 308) {
         String newUrl = conn.getHeaderField("Location");
         conn.disconnect();
-        notifyLog("🔄 重定向到: " + newUrl);
+        notifyLog(context.getString(R.string.redirect_to) + newUrl);
         return downloadApkInternal(newUrl, fileName);
     }
     
     if (responseCode != 200 && responseCode != 206) {  // 206 是部分内容（Range 请求）
         conn.disconnect();
-        throw new Exception("服务器返回错误: " + responseCode);
+        throw new Exception(context.getString(R.string.server_returned_error) + responseCode);
     }
 
     int fileLength = conn.getContentLength();
@@ -724,12 +796,12 @@ private boolean downloadApkInternal(String downloadUrl, String fileName) throws 
     // 验证文件完整性
     if (apkFile.length() == 0) {
         apkFile.delete();
-        throw new Exception("下载的文件大小为 0");
+        throw new Exception(context.getString(R.string.downloaded_file_size_is_0));
     }
     
     if (fileLength > 0 && apkFile.length() < fileLength * 0.9) {
         apkFile.delete();
-        throw new Exception("下载不完整，预期 " + fileLength + " 字节，实际 " + apkFile.length() + " 字节");
+        throw new Exception(context.getString(R.string.incomplete_download_expected) + fileLength + context.getString(R.string.bytes_actual) + apkFile.length() + context.getString(R.string.byte_1));
     }
 
     cancelNotification();

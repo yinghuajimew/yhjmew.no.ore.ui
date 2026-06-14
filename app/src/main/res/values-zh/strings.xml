@@ -237,7 +237,96 @@
 <string name="inject_with_preloader_mode">已注入 libpreloader.so（依赖模式）</string>
 <string name="inject_standalone_mode">已注入独立版 SO（无依赖模式）</string>
 
-<!-- 自动更新相关 -->
+    <string name="obtained_installation_permission_installing">✅ 已获得安装权限，正在安装...</string>
+    <string name="new_version_found">发现新版本: </string>
+    <string name="you_have_skipped_this_version_before">⏭️ 您之前已跳过此版本</string>
+    <string name="this_version_is_a_mandatory_update">⚠️ 此版本为强制更新</string>
+    <string name="update_contentn">更新内容:\n</string>
+    <string name="shared">📡 共有 </string>
+    <string name="download_sources_available"> 个下载源可用</string>
+    <string name="new_version_available">🎉 新版本可用</string>
+    <string name="download_now">立即下载</string>
+    <string name="start_smart_download">🚀 开始智能下载...</string>
+    <string name="reminder_later">稍后提醒</string>
+    <string name="skip_this_version">跳过此版本</string>
+    <string name="version_skipped">⏭️ 已跳过版本 </string>
+    <string name="automatic_check">（自动检查）</string>
+    <string name="manual_inspection_show_skipped_versions">🔍 手动检查：显示已跳过的版本 </string>
+    <string name="it_is_currently_the_latest_version">✅ 当前已是最新版本</string>
+    <string name="update_check_failed">⚠️ 更新检查失败: </string>
+    <string name="ready_to_download">准备下载...</string>
+    <string name="downloaded">已下载 </string>
+    <string name="requires_installation_permissions">⚠️ 需要安装权限</string>
+    <string name="the_app_requires_the_install_unknown_app_permissio">应用需要\&quot;安装未知应用\&quot;权限才能安装更新。\n\n授权后请返回，对话框会自动关闭并开始安装。</string>
+    <string name="to_authorize">去授权</string>
+    <string name="download_completed">✅ 下载完成</string>
+    <string name="the_update_package_has_been_downloaded_do_you_want">更新包已下载完成，是否立即安装？</string>
+    <string name="skipped_version">⏭️ 已跳过版本: </string>
+    <string name="must_update">⚠️ 必须更新</string>
+    <string name="your_current_version_is_too_old_and_must_be_update">您当前的版本过低，必须更新才能继续使用。\n\n</string>
+    <string name="current_version">当前版本: </string>
+    <string name="minimum_version">最低版本: </string>
+    <string name="latest_version">最新版本: </string>
+    <string name="update_now">立即更新</string>
+    <string name="forced_update_start_downloading">🚀 强制更新：开始下载...</string>
+    <string name="app_update_download">应用更新下载</string>
+    <string name="show_app_update_download_progress">显示应用更新下载进度</string>
+    <string name="shared_1">🔍 共有 </string>
+    <string name="update_sources"> 个更新源</string>
+    <string name="try_the_source">📡 尝试源 </string>
+    <string name="from">✅ 从 </string>
+    <string name="obtain_updated_information_successfully"> 获取更新信息成功</string>
+    <string name="source_1">❌ 源 </string>
+    <string name="fail"> 失败: </string>
+    <string name="switch_to_next_source">⏭️ 切换到下一个源...</string>
+    <string name="all_update_sources_are_inaccessible_total">所有更新源均无法访问 (共 </string>
+    <string name="sources"> 个源)</string>
+    <string name="requesting">🔗 正在请求: </string>
+    <string name="response_code">📡 响应码: </string>
+    <string name="redirect_to">🔄 重定向到: </string>
+    <string name="contenttype">📄 Content-Type: </string>
+    <string name="contentlength">📦 Content-Length: </string>
+    <string name="server_returns_html_instead_of_json_contenttype">服务器返回 HTML 而非 JSON (Content-Type: </string>
+    <string name="actual_reading">📦 实际读取: </string>
+    <string name="byte_1"> 字节</string>
+    <string name="server_returns_empty_content">服务器返回空内容</string>
+    <string name="utf8_decoding_failed_try_gbk">⚠️ UTF-8 解码失败，尝试 GBK</string>
+    <string name="unable_to_decode_response_content_tried_utf8_and_g">无法解码响应内容 (尝试了 UTF-8 和 GBK)</string>
+    <string name="response_preview_first_100_characters">📝 响应预览 (前 100 字符): </string>
+    <string name="the_returned_content_is_not_in_json_format_startin">返回内容不是 JSON 格式，开头: </string>
+    <string name="file_does_not_exist_404">文件不存在 (404)</string>
+    <string name="access_denied_403">访问被拒绝 (403)</string>
+    <string name="http">HTTP </string>
+    <string name="the_download_failed_and_the_server_returned">下载失败，服务器返回: </string>
+    <string name="download_failed">下载失败: </string>
+    <string name="no_update_instructions_yet">暂无更新说明</string>
+    <string name="no_changelog_available">No changelog available</string>
+    <string name="failed_to_parse_update_information">解析更新信息失败: </string>
+    <string name="start_installation">=== 开始安装 ===</string>
+    <string name="apk_file_does_not_exist">APK 文件不存在</string>
+    <string name="file">📦 文件: </string>
+    <string name="requires_installation_permission_jumping_to_settin">⚠️ 需要安装权限，正在跳转设置...</string>
+    <string name="the_installation_interface_has_been_launched">✅ 已调起安装界面</string>
+    <string name="installation_failed">安装失败: </string>
+    <string name="details">详情: </string>
+    <string name="downloading_updates">正在下载更新</string>
+    <string name="testing_speed_looking_for_the_fastest_download_sou">🔍 正在测速，寻找最快的下载源...</string>
+    <string name="all_download_sources_are_unavailable_please_check_">所有下载源均不可用，请检查网络连接</string>
+    <string name="receiving_from">📥 正在从 </string>
+    <string name="download_response_time"> 下载... (响应时间: </string>
+    <string name="download_successful"> 下载成功！</string>
+    <string name="download_failed_1"> 下载失败: </string>
+    <string name="switching_to_alternate_download_source">⚠️ 正在切换到备用下载源...</string>
+    <string name="all_attempts_to_download_sources_failed_please_try">所有下载源均尝试失败，请稍后重试</string>
+    <string name="available_response"> 可用 (响应: </string>
+    <string name="return_error"> 返回错误: </string>
+    <string name="connection_failed"> 连接失败: </string>
+    <string name="server_returned_error">服务器返回错误: </string>
+    <string name="downloaded_file_size_is_0">下载的文件大小为 0</string>
+    <string name="incomplete_download_expected">下载不完整，预期 </string>
+    <string name="bytes_actual"> 字节，实际 </string>
+    
+    <!-- 自动更新相关 -->
 <string name="enable_auto_update">启用自动更新</string>
 <string name="check_update_now">立即检查更新</string>
 <string name="auto_update_enabled_log">✅ 自动更新已启用</string>
@@ -248,7 +337,6 @@
 
 <!-- 更新对话框 -->
 <string name="update_available">发现新版本</string>
-<string name="download_now">立即下载</string>
 <string name="download_later">稍后提醒</string>
 <string name="downloading">正在下载</string>
 <string name="download_complete">下载完成</string>
@@ -261,10 +349,7 @@
 <string name="force_update_warning">此版本为强制更新</string>
 <string name="remind_later">稍后提醒</string>
 <string name="skip_version">跳过此版本</string>
-<string name="version_skipped">已跳过版本</string>
 <string name="force_update_title">必须更新</string>
 <string name="force_update_message">您当前的版本过低，必须更新才能继续使用</string>
-<string name="current_version">当前版本</string>
 <string name="min_version">最低版本</string>
-<string name="latest_version">最新版本</string>
 </resources>
