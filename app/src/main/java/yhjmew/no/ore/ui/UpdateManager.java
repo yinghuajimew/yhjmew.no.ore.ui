@@ -338,9 +338,9 @@ public void checkUpdate(final UpdateCallback callback) {
         }).start();
     }
 
-    private void parseUpdateResponse(String json, String currentVersion, boolean isManual) {  // ← 新增 isManual 参数
+    private void parseUpdateResponse(String json, String currentVersion, boolean isManual) {
     try {
-        JSONObject root = new JSONObject(json);
+        org.json.JSONObject root = new org.json.JSONObject(json);
         
         String latestVersion = root.getString("version");
         boolean forceUpdate = root.optBoolean("forceUpdate", false);
@@ -348,7 +348,7 @@ public void checkUpdate(final UpdateCallback callback) {
         
         // 解析多语言更新日志
         String changelog;
-        JSONObject changelogObj = root.optJSONObject("changelog");
+        org.json.JSONObject changelogObj = root.optJSONObject("changelog");
         if (changelogObj != null) {
             String lang = java.util.Locale.getDefault().getLanguage();
             if ("zh".equals(lang)) {
@@ -361,28 +361,44 @@ public void checkUpdate(final UpdateCallback callback) {
         }
         
         // 解析下载源
-        JSONArray sourcesArray = root.getJSONArray("downloadSources");
+        org.json.JSONArray sourcesArray = root.getJSONArray("downloadSources");
         List<DownloadSource> sources = new ArrayList<DownloadSource>();
         
-        for (int i = 0; i < sourcesArray.length(); i++) {
-            JSONObject sourceObj = sourcesArray.getJSONObject(i);
-            String name = sourceObj.getString("name");
-            String url = sourceObj.getString("url");
-            String region = sourceObj.optString("region", "");
-            
-            sources.add(new DownloadSource(name, url, region));
-        }
+        for (int i = 0; i < sourcesArray.length(); i++) {  // ← 改为 length()
+			org.json.JSONObject sourceObj = sourcesArray.getJSONObject(i);
+			String name = sourceObj.getString("name");
+			String url = sourceObj.getString("url");
+			String region = sourceObj.optString("region", "");
 
+			sources.add(new DownloadSource(name, url, region));
+		}
+
+        // 添加详细日志
+        notifyLog(context.getString(R.string.version_Information));
+        notifyLog(context.getString(R.string.current_version) + currentVersion);
+        notifyLog(context.getString(R.string.latest_version) + latestVersion);
+        notifyLog(context.getString(R.string.minimum_version) + minVersion);
+        notifyLog(context.getString(R.string.force_update) + forceUpdate);
+        
+        // 判断逻辑
+        boolean isLowerThanMin = isVersionLowerThan(currentVersion, minVersion);
+        notifyLog(context.getString(R.string.lower_than_the_minimum_version) + isLowerThanMin);
+        
         // 检查是否需要强制更新
-        if (forceUpdate || isVersionLowerThan(currentVersion, minVersion)) {
+        if (forceUpdate || isLowerThanMin) {
+            notifyLog(context.getString(R.string.trigger_a_forced_update));
             notifyForceUpdate(latestVersion, currentVersion, minVersion, sources, changelog);
             return;
         }
 
         // 检查是否有新版本
-        if (isNewerVersion(currentVersion, latestVersion)) {
-            notifyUpdateAvailable(latestVersion, sources, changelog, forceUpdate, isManual);  // ← 传递 isManual
+        boolean hasNewVersion = isNewerVersion(currentVersion, latestVersion);
+        notifyLog(context.getString(R.string.there_is_a_new_version) + hasNewVersion);
+        
+        if (hasNewVersion) {
+            notifyUpdateAvailable(latestVersion, sources, changelog, forceUpdate, isManual);
         } else {
+            notifyLog(context.getString(R.string.it_is_currently_the_latest_version));
             notifyNoUpdate();
         }
 
@@ -393,9 +409,15 @@ public void checkUpdate(final UpdateCallback callback) {
 
 /**
  * 检查版本是否低于最低版本
+ * 注意：等于最低版本时返回 false（不需要更新）
  */
 private boolean isVersionLowerThan(String current, String min) {
     try {
+        // 如果最低版本未设置或为 0.0.0，不需要强制更新
+        if (min == null || min.equals("0.0.0") || min.trim().isEmpty()) {
+            return false;
+        }
+        
         String[] currentParts = current.split("\\.");
         String[] minParts = min.split("\\.");
 
@@ -405,14 +427,18 @@ private boolean isVersionLowerThan(String current, String min) {
             int minPart = i < minParts.length ? Integer.parseInt(minParts[i]) : 0;
 
             if (currentPart < minPart) {
-                return true;
+                return true;  // 当前版本低于最低版本
             } else if (currentPart > minPart) {
-                return false;
+                return false;  // 当前版本高于最低版本
             }
+            // 相等，继续比较下一位
         }
+        
+        // 所有位都相等，返回 false（不需要更新）
         return false;
+        
     } catch (Exception e) {
-        return false;
+        return false;  // 解析失败，不强制更新
     }
 }
 

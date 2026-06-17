@@ -352,4 +352,10 @@
 <string name="force_update_title">Must update</string>
 <string name="force_update_message">Your current version is too low and you must update it to continue using it.</string>
 <string name="min_version">Minimum version</string>
+
+<string name="version_Information">📊 Version Information:</string>
+<string name="force_update">  Force Update: </string>
+<string name="lower_than_the_minimum_version">  Lower than the minimum version: </string>
+<string name="trigger_a_forced_update">⚠️ Trigger a forced update</string>
+<string name="there_is_a_new_version">  There\'s a new version: </string>
 </resources>

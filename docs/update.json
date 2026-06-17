@@ -1,7 +1,7 @@
 {
     "version": "1.8",
     "versionCode": 9,
-    "forceUpdate": true,
+    "forceUpdate": false,
     "minVersion": "1.8",
     "changelog": {
         "zh": " 1.8:支持1.26.30\n (作为1.7过度更新使用)\n1. 新增智能下载功能（自动测速+自动重试）\n2. 优化下载稳定性\n3. 支持多下载源无缝切换\n4. 新增版本跳过功能\n5. 支持强制更新\n6. 更新日志支持中英文\n7. 优化下载稳定性",

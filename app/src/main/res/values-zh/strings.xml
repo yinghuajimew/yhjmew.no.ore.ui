@@ -352,4 +352,10 @@
 <string name="force_update_title">必须更新</string>
 <string name="force_update_message">您当前的版本过低，必须更新才能继续使用</string>
 <string name="min_version">最低版本</string>
+
+<string name="version_Information">📊 版本信息:</string>
+<string name="force_update">  强制更新: </string>
+<string name="lower_than_the_minimum_version">  低于最低版本: </string>
+<string name="trigger_a_forced_update">⚠️ 触发强制更新</string>
+<string name="there_is_a_new_version">  有新版本: </string>
 </resources>
