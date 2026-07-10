@@ -1,31 +1,31 @@
 {
-    "version": "1.8",
-    "versionCode": 9,
+    "version": "1.9",
+    "versionCode": 10,
     "forceUpdate": false,
-    "minVersion": "1.8",
+    "minVersion": "1.9",
     "changelog": {
-        "zh": " 1.8:支持1.26.30\n (作为1.7过度更新使用)\n1. 新增智能下载功能（自动测速+自动重试）\n2. 优化下载稳定性\n3. 支持多下载源无缝切换\n4. 新增版本跳过功能\n5. 支持强制更新\n6. 更新日志支持中英文\n7. 优化下载稳定性",
-        "en": " 1.8: Support for 1.26.30\n (Used as a 1.7 over update) \n1. added smart download function (auto speed test + auto retry)\n2. optimized download stability\n3. support seamless switching between multiple download sources\n4. added version skip function\n5. support forced update\n6. update log support in English and Chinese\n7. optimized download stability"
+        "zh": " 1.9:支持1.26.33\n\n libForceCloseOreUI 非依赖版本更新，config.json以及safe_mode重写\n 增加自动将识别成功的特征码，写入特征码文件，并每次启动只用文件里的特征码\n 防止两个重要文件损坏，或者是说结构不对，则会重新加载",
+        "en": " 1.9:Support 1.26.33\n\n libForceCloseOreUI non-dependent version update, config.json and safe_mode rewrite\n Increase the feature code that is recognized successfully, write it to the feature code file automatically, and only use the feature code in the file for each startup\n Prevent the corruption of the two important files, or say that the structure is not right, then it will be Reload"
     },
     "downloadSources": [
         {
             "name": "GitHub",
-            "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/1.8/oreUI._1.8_yhjmew.no.ore.ui.apk",
+            "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/1.9/oreUI._1.9_yhjmew.no.ore.ui.apk",
             "region": "海外"
         },
         {
             "name": "Cloudflare",
-            "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.8_yhjmew.no.ore.ui.apk",
+            "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.9_yhjmew.no.ore.ui.apk",
             "region": "国内外"
         },
         {
             "name": "gitcode",
-            "url": "https://gitcode.com/yinghuaji/yhjmew.no.ore.ui/releases/download/1.8/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.8_yhjmew.no.ore.ui.apk",
+            "url": "https://gitcode.com/yinghuaji/yhjmew.no.ore.ui/releases/download/1.9/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_1.9_yhjmew.no.ore.ui.apk",
             "region": "国内"
         },
         {
             "name": "zihao_il",
-            "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BBoreUI%E6%89%93%E5%8C%85_1.8_yhjmew.no.ore.ui.apk",
+            "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BBoreUI%E6%89%93%E5%8C%85_1.9_yhjmew.no.ore.ui.apk",
             "region": "国内"
         }
     ]

@@ -8,8 +8,8 @@ android {
         applicationId "yhjmew.no.ore.ui"
         minSdkVersion 14
         targetSdkVersion 29
-        versionCode 8
-        versionName "1.7.1"
+        versionCode 10
+        versionName "1.9"
     }
     buildTypes {
         release {
