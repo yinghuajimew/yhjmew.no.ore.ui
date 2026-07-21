@@ -23,7 +23,7 @@ jobs:
       - name: 配置 Android SDK（命令行工具）
         uses: android-actions/setup-android@v3
 
-      # 云端下载 API 30 SDK 和 30.0.3 构建工具（原生64位，速度极快）
+      # 云端下载 API 30 SDK 和 30.0.3 构建工具
       - name: 安装所需 SDK 组件
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
@@ -45,11 +45,12 @@ jobs:
       - name: 生成 local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # === 临时提升编译版本（仅在 CI 运行，不提交到仓库，本地 AIDE+ 零受影响） ===
-      - name: 临时升级编译版本（针对 CI 编译环境）
+      # === 临时提升编译版本与最低兼容版本（仅在 CI 运行，不提交到仓库，本地 AIDE+ 零影响） ===
+      - name: 临时升级编译与最低兼容版本（针对 CI 编译环境）
         run: |
           sed -i 's/compileSdkVersion 21/compileSdkVersion 30/g' app/build.gradle
           sed -i 's/buildToolsVersion "21.1.0"/buildToolsVersion "30.0.3"/g' app/build.gradle
+          sed -i 's/minSdkVersion 14/minSdkVersion 26/g' app/build.gradle
 
       # implementation 是 AGP 3.x 引入的，AGP 1.x 只认 compile
       # 仅在 CI 运行时临时替换，不会提交回仓库，aide+ 不受任何影响
