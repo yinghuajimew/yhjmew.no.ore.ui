@@ -78,14 +78,21 @@ jobs:
       - name: 编译 Debug APK
         run: gradle assembleDebug --no-daemon
 
-      # === 新增步骤：使用项目内置的 BKS 密钥对编译完成后的 APK 进行签名与自检 ===
+      # === 升级签名逻辑：动态加载 BouncyCastle，完美支持 BKS 签名加密方式 ===
       - name: 使用项目内置的 BKS 密钥给 APK 签名
         run: |
-          # 自动寻找输出目录下的 APK 产物
+          # 1. 下载 BouncyCastle 安全提供者 jar
+          wget -q https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15on/1.68/bcprov-jdk15on-1.68.jar -O /tmp/bcprov.jar
+
+          # 2. 自动寻找输出目录下的 APK 产物
           APK_FILE=$(find app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
           if [ -n "$APK_FILE" ]; then
-            echo "正在使用项目中的 BKS 密钥对 $APK_FILE 进行签名..."
-            $ANDROID_HOME/build-tools/30.0.3/apksigner sign \
+            echo "正在使用加载了 BouncyCastle 的 apksigner 对 $APK_FILE 进行签名..."
+            
+            # 使用 java -cp 把 BouncyCastle 打入 classpath 并指定类加载器加载
+            java -cp "$ANDROID_HOME/build-tools/30.0.3/lib/apksigner.jar:/tmp/bcprov.jar" \
+              com.android.apksigner.ApkSignerTool sign \
+              --provider-class org.bouncycastle.jce.provider.BouncyCastleProvider \
               --ks app/src/main/assets/debug-mt.bks \
               --ks-type BKS \
               --ks-key-alias mt \
@@ -94,6 +101,7 @@ jobs:
               "$APK_FILE"
             
             echo "--- 签名验证结果 ---"
+            # verify 验证阶段由于不打开 keystore 密钥库，直接调用普通命令即可
             $ANDROID_HOME/build-tools/30.0.3/apksigner verify -v "$APK_FILE"
           else
             echo "错误：没有找到编译生成的 APK 产物！"
