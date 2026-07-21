@@ -23,17 +23,11 @@ jobs:
       - name: 配置 Android SDK（命令行工具）
         uses: android-actions/setup-android@v3
 
+      # 云端下载 API 30 SDK 和 30.0.3 构建工具（原生64位，速度极快）
       - name: 安装所需 SDK 组件
         run: |
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-21" "build-tools;21.1.0"
-
-      # 针对旧版 32 位 aapt (Build-tools 21.1.0) 所需的环境准备
-      - name: 安装 32 位支持库 (旧版 aapt 依赖)
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update
-          sudo apt-get install -y libc6:i386 libstdc++6:i386 zlib1g:i386 libgcc-s1:i386
+          sdkmanager "platforms;android-30" "build-tools;30.0.3"
 
       - name: 切换到 JDK 8（供 Gradle 编译使用）
         uses: actions/setup-java@v4
@@ -51,13 +45,11 @@ jobs:
       - name: 生成 local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # 仅在 CI 运行时动态剔除低版本 AAPT 无法解析的 android:requestLegacyExternalStorage 属性
-      # 这能防止低版本编译器在分析 Manifest 属性时报错崩溃，且不影响您本地代码库
-      - name: 移除低版本 SDK 不支持的 Manifest 属性
+      # === 临时提升编译版本（仅在 CI 运行，不提交到仓库，本地 AIDE+ 零受影响） ===
+      - name: 临时升级编译版本（针对 CI 编译环境）
         run: |
-          if [ -f "app/src/main/AndroidManifest.xml" ]; then
-            sed -i 's/android:requestLegacyExternalStorage="[^"]*"//g' app/src/main/AndroidManifest.xml
-          fi
+          sed -i 's/compileSdkVersion 21/compileSdkVersion 30/g' app/build.gradle
+          sed -i 's/buildToolsVersion "21.1.0"/buildToolsVersion "30.0.3"/g' app/build.gradle
 
       # implementation 是 AGP 3.x 引入的，AGP 1.x 只认 compile
       # 仅在 CI 运行时临时替换，不会提交回仓库，aide+ 不受任何影响
