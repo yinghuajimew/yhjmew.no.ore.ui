@@ -35,27 +35,43 @@ jobs:
           java-version: '8'
           distribution: 'temurin'
 
-      - name: 安装 Gradle 2.14.1
+      # 升级到 Gradle 6.5，以配合现代的 Android Gradle 插件运行 D8 编译器
+      - name: 安装 Gradle 6.5
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-2.14.1-bin.zip \
+          wget -q https://services.gradle.org/distributions/gradle-6.5-bin.zip \
                -O /tmp/gradle.zip
           unzip -q /tmp/gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-2.14.1/bin" >> $GITHUB_PATH
+          echo "/opt/gradle/gradle-6.5/bin" >> $GITHUB_PATH
 
       - name: 生成 local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-      # === 临时提升编译版本与最低兼容版本（仅在 CI 运行，不提交到仓库，本地 AIDE+ 零影响） ===
-      - name: 临时升级编译与最低兼容版本（针对 CI 编译环境）
+      # === 临时重写根目录 build.gradle（仅在 CI 运行，引入现代 D8 编译器与 google 仓库） ===
+      - name: 临时重写根目录 build.gradle
+        run: |
+          cat << 'EOF' > build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  jcenter()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:4.1.0'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  jcenter()
+              }
+          }
+          EOF
+
+      # 临时提升 app 的编译版本至 30 (与 D8 / Build-tools 一致)
+      - name: 临时升级编译版本（针对 CI 编译环境）
         run: |
           sed -i 's/compileSdkVersion 21/compileSdkVersion 30/g' app/build.gradle
           sed -i 's/buildToolsVersion "21.1.0"/buildToolsVersion "30.0.3"/g' app/build.gradle
-          sed -i 's/minSdkVersion 14/minSdkVersion 26/g' app/build.gradle
-
-      # implementation 是 AGP 3.x 引入的，AGP 1.x 只认 compile
-      # 仅在 CI 运行时临时替换，不会提交回仓库，aide+ 不受任何影响
-      - name: 修复依赖配置兼容性（implementation → compile）
-        run: sed -i 's/\bimplementation\b/compile/g' app/build.gradle
 
       - name: 编译 Debug APK
         run: gradle assembleDebug --no-daemon
