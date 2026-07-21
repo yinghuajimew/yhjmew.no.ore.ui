@@ -3,7 +3,7 @@ name: 编译打包 APK
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch:          # 允许在 Actions 页面手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,8 +14,23 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # AGP 1.x 只兼容 JDK 8，JDK 11+ 会报错
-      - name: 配置 JDK 8
+      # sdkmanager 16.0 要求 JDK 17+，先装 17 用于 SDK 配置
+      - name: 配置 JDK 17（供 sdkmanager 使用）
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 配置 Android SDK（命令行工具）
+        uses: android-actions/setup-android@v3
+
+      - name: 安装所需 SDK 组件
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-21" "build-tools;21.1.0"
+
+      # SDK 装完后切回 JDK 8，AGP 1.x 编译需要它
+      - name: 切换到 JDK 8（供 Gradle 编译使用）
         uses: actions/setup-java@v4
         with:
           java-version: '8'
@@ -29,15 +44,7 @@ jobs:
           unzip -q /tmp/gradle.zip -d /opt/gradle
           echo "/opt/gradle/gradle-2.14.1/bin" >> $GITHUB_PATH
 
-      - name: 配置 Android SDK（命令行工具）
-        uses: android-actions/setup-android@v3
-
-      - name: 安装所需 SDK 组件
-        run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "platforms;android-21" "build-tools;21.1.0"
-
-      # local.properties 一般不入库，CI 每次按需生成，不会提交进仓库
+      # local.properties 不入库，CI 每次按需生成
       - name: 生成 local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
