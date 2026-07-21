@@ -28,7 +28,7 @@ jobs:
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platforms;android-21" "build-tools;21.1.0"
 
-      # === 插入的步骤：修复旧版 32 位 aapt 无法在 64 位系统上运行的问题 ===
+      # 针对旧版 32 位 aapt (Build-tools 21.1.0) 所需的环境准备
       - name: 安装 32 位支持库 (旧版 aapt 依赖)
         run: |
           sudo dpkg --add-architecture i386
@@ -50,6 +50,14 @@ jobs:
 
       - name: 生成 local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      # 仅在 CI 运行时动态剔除低版本 AAPT 无法解析的 android:requestLegacyExternalStorage 属性
+      # 这能防止低版本编译器在分析 Manifest 属性时报错崩溃，且不影响您本地代码库
+      - name: 移除低版本 SDK 不支持的 Manifest 属性
+        run: |
+          if [ -f "app/src/main/AndroidManifest.xml" ]; then
+            sed -i 's/android:requestLegacyExternalStorage="[^"]*"//g' app/src/main/AndroidManifest.xml
+          fi
 
       # implementation 是 AGP 3.x 引入的，AGP 1.x 只认 compile
       # 仅在 CI 运行时临时替换，不会提交回仓库，aide+ 不受任何影响
