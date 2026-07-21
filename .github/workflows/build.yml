@@ -28,6 +28,13 @@ jobs:
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager "platforms;android-21" "build-tools;21.1.0"
 
+      # === 插入的步骤：修复旧版 32 位 aapt 无法在 64 位系统上运行的问题 ===
+      - name: 安装 32 位支持库 (旧版 aapt 依赖)
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y libc6:i386 libstdc++6:i386 zlib1g:i386 libgcc-s1:i386
+
       - name: 切换到 JDK 8（供 Gradle 编译使用）
         uses: actions/setup-java@v4
         with:
