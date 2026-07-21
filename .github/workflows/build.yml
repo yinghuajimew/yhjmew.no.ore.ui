@@ -67,11 +67,13 @@ jobs:
           }
           EOF
 
-      # 临时提升 app 的编译版本至 30 (与 D8 / Build-tools 一致)
-      - name: 临时升级编译版本（针对 CI 编译环境）
+      # 1. 临时升级编译版本至 30 (与 D8/Build-tools 一致)
+      # 2. 临时插入 compileOptions 配置以开启 Java 8 脱糖支持，兼容 minSdkVersion 14
+      - name: 临时升级编译版本与配置（针对 CI 编译环境）
         run: |
           sed -i 's/compileSdkVersion 21/compileSdkVersion 30/g' app/build.gradle
           sed -i 's/buildToolsVersion "21.1.0"/buildToolsVersion "30.0.3"/g' app/build.gradle
+          sed -i 's/buildTypes {/compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n\n    buildTypes {/g' app/build.gradle
 
       - name: 编译 Debug APK
         run: gradle assembleDebug --no-daemon
