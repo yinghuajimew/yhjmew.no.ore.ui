@@ -4,7 +4,7 @@
     "forceUpdate": false,
     "minVersion": "2.0",
     "changelog": {
-        "zh": " 2.0:支持1.26.40\n\n 更换dex文件，更坚固的防止全局左上角按钮消失问题"
+        "zh": " 2.0:支持1.26.40\n\n 更换dex文件，更坚固的防止全局左上角按钮消失问题",
         "en": " 2.0:Support 1.26.40\n\n Replacement of dex file, more robust to prevent global top left button disappearance problem"
     },
     "downloadSources": [
