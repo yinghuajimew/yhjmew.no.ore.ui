@@ -1,31 +1,26 @@
 {
-    "version": "2.0",
-    "versionCode": 10,
+    "version": "2.1",
+    "versionCode": 11,
     "forceUpdate": false,
-    "minVersion": "2.0",
+    "minVersion": "2.1",
     "changelog": {
-        "zh": " 2.0:支持1.26.40\n\n 更换dex文件，更坚固的防止全局左上角按钮消失问题",
-        "en": " 2.0:Support 1.26.40\n\n Replacement of dex file, more robust to prevent global top left button disappearance problem"
+        "zh": " 2.1:支持1.26.50\n\n 更新非依赖版本so 增加crash_native.log\n\n 更新，一键打包，自动根据安卓版本切换so",
+        "en": " 2.1: Support 1.26.50\n\n update non-dependent version so add crash_native.log\n\n update, one-click packaging, automatically switch so according to the Android version"
     },
     "downloadSources": [
         {
             "name": "GitHub",
-            "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.0/oreUI._2.0_yhjmew.no.ore.ui.apk",
+            "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.1/oreUI._2.1_yhjmew.no.ore.ui.apk",
             "region": "海外"
         },
         {
             "name": "Cloudflare",
-            "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.0_yhjmew.no.ore.ui.apk",
+            "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.1_yhjmew.no.ore.ui.apk",
             "region": "国内外"
         },
         {
-            "name": "gitcode",
-            "url": "https://gitcode.com/yinghuaji/yhjmew.no.ore.ui/releases/download/1.9/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.0_yhjmew.no.ore.ui.apk",
-            "region": "国内"
-        },
-        {
             "name": "zihao_il",
-            "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BBoreUI%E6%89%93%E5%8C%85_2.0_yhjmew.no.ore.ui.apk",
+            "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BBoreUI%E6%89%93%E5%8C%85_2.1_yhjmew.no.ore.ui.apk",
             "region": "国内"
         }
     ]
