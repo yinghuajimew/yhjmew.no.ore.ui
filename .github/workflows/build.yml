@@ -20,6 +20,8 @@ jobs:
 
       - name: 配置 Android SDK（命令行工具）
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''    # ← 加这行，跳过默认的 tools 安装，后面手动 sdkmanager 装
 
       # 云端下载 API 30 SDK 和 30.0.3 构建工具
       - name: 安装所需 SDK 组件
