@@ -69,8 +69,15 @@ public class ApkProcessor {
      * 加载 SO 配置
      */
     private void loadSoConfig() {
-        SharedPreferences prefs = context.getSharedPreferences(PREF_SO, Context.MODE_PRIVATE);
-        currentSoType = prefs.getInt("so_type", SO_TYPE_STANDALONE);
+        // 根据当前运行此打包工具的 Android 版本自动选择 SO。
+        // Android 11 (API 30) 及以上：独立版 SO
+        // Android 10 (API 29) 及以下：依赖版 SO
+        // 不再使用之前保存的 SO 类型，避免在不同 Android 版本设备上选错。
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            currentSoType = SO_TYPE_STANDALONE;
+        } else {
+            currentSoType = SO_TYPE_WITH_PRELOADER;
+        }
     }
 
     /**
