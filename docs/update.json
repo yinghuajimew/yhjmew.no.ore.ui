@@ -1,17 +1,17 @@
 {
-    "version": "2.2",
-    "versionCode": 13,
+    "version": "2.3",
+    "versionCode": 14,
     "forceUpdate": false,
-    "minVersion": "2.2",
+    "minVersion": "2.3",
     "changelog": {
         "zh": " 2.1:支持1.26.50\n\n 更新非依赖版本so 增加crash_native.log\n\n 更新，一键打包，自动根据安卓版本切换so\n\n\n 2.2:\n 1. writeMatchedSignature() → 加 forceOverwrite 参数\n
 2. tryInstallHook() → 主扫描失败后，若 isTrusted，自动用内置 8 个 fallback sig 重试，成功则强制覆盖 signatures.json\n
 3. getConfigDir() 确定路径后立刻写设备信息头（保证它在 debug.log 最前面）\n
-4. 加 writeLogHeader() 函数，读厂商/型号/Android 版本/SDK/ABI/内核/页大小/时间戳",
+4. 加 writeLogHeader() 函数，读厂商/型号/Android 版本/SDK/ABI/内核/页大小/时间戳\n\n\n 2.3:逐段扫描，跳过段间 gap",
         "en": " 2.1: Support 1.26.50\n\n update non-dependent version so add crash_native.log\n\n update, one-click packaging, automatically switch so according to the Android version\n\n\n 2.2:\n 1. writeMatchedSignature()→ Add forceOverwrite parameter \n
 2. tryInstallHook() → After the main scan fails, if isTrusted, it will automatically retry with the built-in 8 fallback sig, and if it succeeds, the signatures will be forcibly overwritten.json\n
 3. getConfigDir() writes the device information header immediately after determining the path (make sure it is in debug.log front)\n
-4. Add the writeLogHeader() function to read the manufacturer/model/Android version/SDK/ABI/kernel/page size/timestamp"
+4. Add the writeLogHeader() function to read the manufacturer/model/Android version/SDK/ABI/kernel/page size/timestamp\n\n\n 2.3: Scan segment by segment, skip the gap between segments"
     },
     "downloadSources": [
         {
