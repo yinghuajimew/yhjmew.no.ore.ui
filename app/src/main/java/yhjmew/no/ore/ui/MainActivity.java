@@ -64,15 +64,9 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Locale sysLocale = Locale.getDefault();
-        String lang = sysLocale.getLanguage();
-        if (!"zh".equals(lang)) {
-            Locale enLocale = new Locale("en");
-            Locale.setDefault(enLocale);
-            android.content.res.Configuration config = getResources().getConfiguration();
-            config.setLocale(enLocale);
-            getResources().updateConfiguration(config, getResources().getDisplayMetrics());
-        }
+        // 语言必须在 super.onCreate 与 setContentView 之前套用，
+        // 否则已经 inflate 出来的控件还带着旧语言的文本。
+        AppLocale.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
@@ -158,6 +152,14 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 showSoConfigDialog();
+            }
+        });
+
+        TextView btnLanguage = (TextView) findViewById(R.id.btn_language);
+        btnLanguage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showLanguageDrawer();
             }
         });
 
@@ -746,6 +748,145 @@ public class MainActivity extends Activity {
                 }
             }
         }).start();
+    }
+
+    /**
+     * 语言选择抽屉：从右侧滑出，选中即生效并重建界面。
+     *
+     * <p>不用 DrawerLayout（项目没有 appcompat 的依赖装配，minSdk 14 也够不到
+     * Material 的组件），这里用 Dialog + 位移动画实现同样的手感。
+     */
+    private void showLanguageDrawer() {
+        final int[] modes = {
+                AppLocale.MODE_SYSTEM,
+                AppLocale.MODE_ZH_CN,
+                AppLocale.MODE_ZH_TW,
+                AppLocale.MODE_ZH_HK,
+                AppLocale.MODE_EN
+        };
+        final int current = AppLocale.getMode(this);
+
+        final android.widget.LinearLayout panel = new android.widget.LinearLayout(this);
+        panel.setOrientation(android.widget.LinearLayout.VERTICAL);
+        panel.setBackgroundColor(android.graphics.Color.parseColor("#FFFFFF"));
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        panel.setPadding(pad, pad, pad, pad);
+
+        android.widget.TextView title = new android.widget.TextView(this);
+        title.setText(getString(R.string.language_settings));
+        title.setTextSize(17f);
+        title.setTextColor(android.graphics.Color.parseColor("#000000"));
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        android.widget.LinearLayout.LayoutParams tp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        tp.bottomMargin = pad;
+        title.setLayoutParams(tp);
+        panel.addView(title);
+
+        final android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+
+        // 当前选中项用左侧竖条标出来，避免用单选项时把抽屉撑得很宽
+        for (int i = 0; i < modes.length; i++) {
+            final int mode = modes[i];
+
+            android.widget.LinearLayout row = new android.widget.LinearLayout(this);
+            row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            int rowPad = (int) (10 * getResources().getDisplayMetrics().density);
+            row.setPadding(rowPad, rowPad, rowPad, rowPad);
+            row.setBackgroundColor(mode == current
+                    ? android.graphics.Color.parseColor("#F0F0F0")
+                    : android.graphics.Color.parseColor("#FFFFFF"));
+
+            View bar = new View(this);
+            int barW = (int) (3 * getResources().getDisplayMetrics().density);
+            int barH = (int) (18 * getResources().getDisplayMetrics().density);
+            android.widget.LinearLayout.LayoutParams bp =
+                    new android.widget.LinearLayout.LayoutParams(barW, barH);
+            bp.rightMargin = rowPad;
+            bar.setLayoutParams(bp);
+            bar.setBackgroundColor(mode == current
+                    ? android.graphics.Color.parseColor("#000000")
+                    : android.graphics.Color.TRANSPARENT);
+            row.addView(bar);
+
+            android.widget.TextView label = new android.widget.TextView(this);
+            label.setText(getString(AppLocale.modeLabelRes(mode)));
+            label.setTextSize(15f);
+            label.setTextColor(android.graphics.Color.parseColor("#000000"));
+            label.setTypeface(null, mode == current
+                    ? android.graphics.Typeface.BOLD
+                    : android.graphics.Typeface.NORMAL);
+            row.addView(label);
+
+            row.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                    if (mode != AppLocale.getMode(MainActivity.this)) {
+                        AppLocale.setMode(MainActivity.this, mode);
+                        // 重建 Activity：资源、已 inflate 的控件、日志文本都会重来。
+                        // recreate() 在个别 ROM 上不刷新资源，所以先重设一次，
+                        // 失败再退回手动重启一个 Intent。
+                        AppLocale.apply(MainActivity.this);
+                        try {
+                            recreate();
+                        } catch (Throwable t) {
+                            Intent restart = new Intent(MainActivity.this, MainActivity.class);
+                            restart.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(restart);
+                            finish();
+                        }
+                    }
+                }
+            });
+            panel.addView(row);
+        }
+
+        // 跟随系统时把"系统实际给的是什么"显示出来，便于排查
+        if (current == AppLocale.MODE_SYSTEM) {
+            android.widget.TextView hint = new android.widget.TextView(this);
+            hint.setText(Locale.getDefault().toString());
+            hint.setTextSize(11f);
+            hint.setTextColor(android.graphics.Color.parseColor("#888888"));
+            int hp = (int) (10 * getResources().getDisplayMetrics().density);
+            hint.setPadding(hp, hp, hp, 0);
+            panel.addView(hint);
+        }
+
+        dialog.setContentView(panel);
+
+        android.view.Window win = dialog.getWindow();
+        if (win != null) {
+            win.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+
+            android.view.WindowManager.LayoutParams lp = win.getAttributes();
+            lp.gravity = android.view.Gravity.RIGHT | android.view.Gravity.TOP;
+            lp.width = (int) (240 * getResources().getDisplayMetrics().density);
+            lp.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+            lp.dimAmount = 0.35f;
+            win.setAttributes(lp);
+            win.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+
+            // 从右侧滑入
+            win.setWindowAnimations(android.R.style.Animation_Dialog);
+            win.getDecorView().setTranslationX(
+                    win.getDecorView().getWidth()); // 部分 ROM 上需要预置初值
+        }
+
+        dialog.show();
+
+        // show() 之后再跑一次位移动画（不同 ROM 对窗口动画的支持不一致）
+        if (win != null) {
+            final View decor = win.getDecorView();
+            int w = (int) (240 * getResources().getDisplayMetrics().density);
+            decor.setTranslationX(w);
+            decor.animate().translationX(0f).setDuration(200).start();
+        }
     }
 
     private void showAboutDialog() {

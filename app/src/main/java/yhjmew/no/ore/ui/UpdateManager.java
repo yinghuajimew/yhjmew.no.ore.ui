@@ -350,8 +350,12 @@ public void checkUpdate(final UpdateCallback callback) {
         String changelog;
         org.json.JSONObject changelogObj = root.optJSONObject("changelog");
         if (changelogObj != null) {
+            // 只有 update.json 提供 zh / en 两种，繁体也归到 zh。
+            // 这里跟随用户选定的应用语言，而不是系统语言：
+            // 用户在关于页选了 English，就该给英文更新说明。
             String lang = java.util.Locale.getDefault().getLanguage();
-            if ("zh".equals(lang)) {
+            boolean preferZh = "zh".equals(lang);
+            if (preferZh) {
                 changelog = changelogObj.optString("zh", changelogObj.optString("en", context.getString(R.string.no_update_instructions_yet)));
             } else {
                 changelog = changelogObj.optString("en", changelogObj.optString("zh", context.getString(R.string.no_changelog_available)));

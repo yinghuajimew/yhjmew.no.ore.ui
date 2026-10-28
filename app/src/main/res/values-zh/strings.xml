@@ -18,6 +18,12 @@
     <string name="signature_file_path_such_as_sdcardsignjks">签名文件路径 (如 /sdcard/sign.jks)</string>
     <string name="alias">别名 (alias)</string>
     <string name="keystore_password_open_signature_file">KeyStore 密码 (打开签名文件)</string>
+    <string name="language_en">English</string>
+    <string name="language_follow_system">跟随系统</string>
+    <string name="language_settings">语言</string>
+    <string name="language_zh_cn">简体中文</string>
+    <string name="language_zh_hk">繁體中文（香港）</string>
+    <string name="language_zh_tw">繁體中文（台灣）</string>
     <string name="alias_password_access_private_key">别名密码 (访问私钥)</string>
     <string name="custom_signature_configuration">自定义签名配置</string>
     <string name="the_signature_file_path_cannot_be_empty">❌ 签名文件路径不能为空。</string>
