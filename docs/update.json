@@ -1,26 +1,26 @@
 {
-  "version": "2.3",
-  "versionCode": 14,
+  "version": "2.4",
+  "versionCode": 15,
   "forceUpdate": false,
-  "minVersion": "2.3",
+  "minVersion": "2.4",
   "changelog": {
-    "zh": "2.1:支持1.26.50\n\n更新非依赖版本so 增加crash_native.log\n\n更新，一键打包，自动根据安卓版本切换so\n\n2.2:\n1. writeMatchedSignature() → 加 forceOverwrite 参数\n\n2. tryInstallHook() → 主扫描失败后，若 isTrusted，自动用内置 8 个 fallback sig 重试，成功则强制覆盖 signatures.json\n\n3. getConfigDir() 确定路径后立刻写设备信息头（保证它在 debug.log 最前面）\n\n4. 加 writeLogHeader() 函数，读厂商/型号/Android 版本/SDK/ABI/内核/页大小/时间戳\n\n2.3:逐段扫描，跳过段间 gap",
-    "en": "2.1: Support 1.26.50\n\nupdate non-dependent version so add crash_native.log\n\nupdate, one-click packaging, automatically switch so according to the Android version\n\n2.2:\n1. writeMatchedSignature()→ Add forceOverwrite parameter\n\n2. tryInstallHook() → After the main scan fails, if isTrusted, it will automatically retry with the built-in 8 fallback sig, and if it succeeds, the signatures will be forcibly overwritten.json\n\n3. getConfigDir() writes the device information header immediately after determining the path (make sure it is in debug.log front)\n\n4. Add the writeLogHeader() function to read the manufacturer/model/Android version/SDK/ABI/kernel/page size/timestamp\n\n2.3: Scan segment by segment, skip the gap between segments"
+    "zh": "2.4:\n1. 两个 SO 全部更新到最新构建\n   - 独立版：修复第偶数次启动崩溃（去掉同步 hook，改后台线程 + 自验证）\n   - 独立版：修复 MC 升级后配置无法自愈（AutoFallback 曾被误关）\n   - 依赖版：补齐日志/崩溃现场/logcat 快照/设备信息头\n2. 两个 SO 均新增 1.26.60 特征码，覆盖 1.21.90 ~ 1.26.60\n3. SO 改为 16KB 页对齐，支持天玑 9400+ 等 16KB 页设备\n4. 修复国内下载源链接错误（文件名少了空格，导致 500）\n5. update.json 改为合法 JSON（换行符转义）",
+    "en": "2.4:\n1. Both SOs rebuilt from latest sources\n   - Standalone: fixed crash on even-numbered launches (sync hook -> background thread + self-verify)\n   - Standalone: fixed config never recovering after an MC update (AutoFallback was skipped)\n   - Dependent: added logging / native crash dump / logcat snapshot / device info header\n2. Both SOs now include the 1.26.60 signature; coverage 1.21.90 ~ 1.26.60\n3. SOs are now 16KB-page aligned (Dimensity 9400+ and similar)\n4. Fixed the domestic download source URL (missing spaces in filename caused HTTP 500)\n5. update.json is now valid JSON (escaped newlines)"
   },
   "downloadSources": [
     {
       "name": "GitHub",
-      "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.3/oreUI._2.3_yhjmew.no.ore.ui.apk",
+      "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.4/oreUI._2.4_yhjmew.no.ore.ui.apk",
       "region": "海外"
     },
     {
       "name": "Cloudflare",
-      "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.3_yhjmew.no.ore.ui.apk",
+      "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.4_yhjmew.no.ore.ui.apk",
       "region": "国内外"
     },
     {
       "name": "zihao_il",
-      "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.3_yhjmew.no.ore.ui.apk",
+      "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.4_yhjmew.no.ore.ui.apk",
       "region": "国内"
     }
   ]
