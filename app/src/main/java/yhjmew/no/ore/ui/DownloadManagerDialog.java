@@ -64,8 +64,15 @@ final class DownloadManagerDialog {
         tvDir = new TextView(activity);
         tvDir.setTextSize(11f);
         tvDir.setTextColor(Color.parseColor("#666666"));
-        tvDir.setText(activity.getString(R.string.msg_save_to) + "\n"
-                + GameDownloader.displayDir(activity));
+
+        String dirText = activity.getString(R.string.msg_save_to) + "\n"
+                + GameDownloader.displayDir(activity);
+        if (!GameDownloader.usingPublicDir(activity)) {
+            // 没拿到「所有文件访问权限」，退回了私有目录 —— 要说清楚
+            tvDir.setTextColor(Color.parseColor("#C62828"));
+            dirText = activity.getString(R.string.msg_download_dir_fallback) + "\n" + dirText;
+        }
+        tvDir.setText(dirText);
         tvDir.setPadding(0, 0, 0, (int) (8 * dp));
         root.addView(tvDir);
 
@@ -284,6 +291,39 @@ final class DownloadManagerDialog {
             });
         }
         actions.addView(row.btnPause);
+
+        // 已经下完的：给一个"处理"按钮，直接进普通/共存处理，
+        // 不用用户再去文件管理器里把同一个包找一遍
+        final boolean finished = fileLength > 0 && !GameDownloader.isRunning(version);
+        if (finished) {
+            Button btnProcess = new Button(activity);
+            btnProcess.setTextSize(12f);
+            btnProcess.setText(activity.getString(R.string.btn_process_this));
+            btnProcess.setBackground(activity.getResources().getDrawable(R.drawable.bg_black_border));
+            btnProcess.setTextColor(Color.BLACK);
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            plp.leftMargin = (int) (8 * dp);
+            btnProcess.setLayoutParams(plp);
+            btnProcess.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    File target = GameDownloader.targetFile(activity, version);
+                    if (!target.exists()) {
+                        toast(activity.getString(R.string.err_apk_missing));
+                        return;
+                    }
+                    if (activity instanceof MainActivity) {
+                        // 关掉下载页，避免处理对话框叠在它上面
+                        if (dialog != null && dialog.isShowing()) {
+                            dialog.dismiss();
+                        }
+                        ((MainActivity) activity).startProcessDownloaded(target);
+                    }
+                }
+            });
+            actions.addView(btnProcess);
+        }
 
         Button btnDel = new Button(activity);
         btnDel.setTextSize(12f);

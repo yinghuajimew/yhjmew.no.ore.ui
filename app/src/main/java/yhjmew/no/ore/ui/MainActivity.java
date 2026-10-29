@@ -312,43 +312,93 @@ public class MainActivity extends Activity {
             if (data != null && data.getData() != null) {
                 final Uri apkUri = data.getData();
                 resolveOriginalFileInfo(apkUri);
-
-                String detectedPkg = null;
-                try {
-                    detectedPkg = packageDetector.detectPackageNameFromApkUri(apkUri);
-                } catch (Exception e) {
-                    printLog(getString(R.string.err_read_pkg_failed) + Utils.getFullStackTrace(e));
-                }
-
-                if (detectedPkg != null && detectedPkg.length() > 0) {
-                    currentDetectedPackageName = detectedPkg;
-                } else {
-                    currentDetectedPackageName = DEFAULT_PKG_NAME;
-                }
-
-                currentCloneMaxLength = Math.min(currentDetectedPackageName.length(), SO_PKG_MAX_LENGTH);
-
-                printLog(getString(R.string.log_selected_files) + originalFileName);
-                printLog(getString(R.string.log_pkg_detected) + currentDetectedPackageName);
-                printLog(getString(R.string.msg_clone_max_len) + currentCloneMaxLength);
-
-                if (currentPickMode == PICK_MODE_NORMAL) {
-                    printLog(getString(R.string.log_ready_normal));
-                    processApkInBackground(apkUri, false, currentDetectedPackageName, currentDetectedPackageName);
-                } else if (currentPickMode == PICK_MODE_CLONE) {
-                    if (detectedPkg == null || detectedPkg.length() == 0) {
-                        printLog(getString(R.string.err_read_apk_pkg));
-                    } else {
-                        printLog(getString(R.string.msg_ask_continue_pkg));
-                        showCloneConfigDialog(apkUri);
-                    }
-                } else {
-                    printLog(getString(R.string.err_mode_unknown));
-                }
-
+                prepareAndProcess(apkUri, currentPickMode);
                 currentPickMode = PICK_MODE_NONE;
             }
         }
+    }
+
+    /**
+     * 统一入口：拿到 APK 的 Uri 后做「读包名 → 选择处理方式」。
+     *
+     * <p>从文件选择器选完走这里；从下载列表直接点某个包也走这里，
+     * 两条路复用同一套逻辑，避免行为分叉。
+     */
+    private void prepareAndProcess(final Uri apkUri, final int pickMode) {
+        String detectedPkg = null;
+        try {
+            detectedPkg = packageDetector.detectPackageNameFromApkUri(apkUri);
+        } catch (Exception e) {
+            printLog(getString(R.string.err_read_pkg_failed) + Utils.getFullStackTrace(e));
+        }
+
+        if (detectedPkg != null && detectedPkg.length() > 0) {
+            currentDetectedPackageName = detectedPkg;
+        } else {
+            currentDetectedPackageName = DEFAULT_PKG_NAME;
+        }
+
+        currentCloneMaxLength = Math.min(currentDetectedPackageName.length(), SO_PKG_MAX_LENGTH);
+
+        printLog(getString(R.string.log_selected_files) + originalFileName);
+        printLog(getString(R.string.log_pkg_detected) + currentDetectedPackageName);
+        printLog(getString(R.string.msg_clone_max_len) + currentCloneMaxLength);
+
+        if (pickMode == PICK_MODE_NORMAL) {
+            printLog(getString(R.string.log_ready_normal));
+            processApkInBackground(apkUri, false,
+                    currentDetectedPackageName, currentDetectedPackageName);
+        } else if (pickMode == PICK_MODE_CLONE) {
+            if (detectedPkg == null || detectedPkg.length() == 0) {
+                printLog(getString(R.string.err_read_apk_pkg));
+            } else {
+                printLog(getString(R.string.msg_ask_continue_pkg));
+                showCloneConfigDialog(apkUri);
+            }
+        } else {
+            printLog(getString(R.string.err_mode_unknown));
+        }
+    }
+
+    /**
+     * 让用户选「普通处理 / 共存处理」，然后直接开始。
+     *
+     * <p>下载页点某个包就调这里 —— 不再要求用户回到主界面、
+     * 点处理按钮、再从文件管理器里把同一个文件找一遍。
+     */
+    void startProcessDownloaded(final File apkFile) {
+        if (apkFile == null || !apkFile.exists()) {
+            showToast(getString(R.string.err_apk_missing));
+            return;
+        }
+        // 先确认存储权限（写输出目录需要）
+        if (!checkAndRequestPermissions()) {
+            return;
+        }
+
+        final Uri uri = Uri.fromFile(apkFile);
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.title_choose_mode))
+                .setMessage(apkFile.getName())
+                .setPositiveButton(getString(R.string.btn_normal_processing),
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface d, int w) {
+                                resolveOriginalFileInfo(uri);
+                                prepareAndProcess(uri, PICK_MODE_NORMAL);
+                            }
+                        })
+                .setNeutralButton(getString(R.string.btn_coexistence_processing),
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface d, int w) {
+                                resolveOriginalFileInfo(uri);
+                                prepareAndProcess(uri, PICK_MODE_CLONE);
+                            }
+                        })
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .show();
     }
 
     private String getFileNameFromUri(Uri uri) {
@@ -365,13 +415,27 @@ public class MainActivity extends Activity {
     }
 
     private void resolveOriginalFileInfo(Uri uri) {
-        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-        if (cursor != null && cursor.moveToFirst()) {
-            int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-            if (nameIndex != -1) {
-                originalFileName = cursor.getString(nameIndex);
+        // file:// 走不了 ContentResolver.query，先从路径直接取文件名
+        if ("file".equals(uri.getScheme())) {
+            String p = uri.getPath();
+            if (p != null) {
+                File f = new File(p);
+                if (f.getName() != null && f.getName().length() > 0) {
+                    originalFileName = f.getName();
+                }
+                if (f.getParent() != null) {
+                    originalDirectory = f.getParent();
+                }
             }
-            cursor.close();
+        } else {
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (nameIndex != -1) {
+                    originalFileName = cursor.getString(nameIndex);
+                }
+                cursor.close();
+            }
         }
 
         String path = uri.getPath();
@@ -455,6 +519,11 @@ public class MainActivity extends Activity {
      * 再交给下载器。下完不自动装，交给用户决定。
      */
     private void showVersionPicker() {
+        // 下载要写到公共 Download 目录，先把权限要了。
+        // 用户在设置里点「允许」回来之后 onActivityResult 会走到，
+        // 那时再点一次「下载游戏」就行；这里不强求一次到位。
+        checkAndRequestPermissions();
+
         new VersionPickerDialog(this, new VersionPickerDialog.OnPickListener() {
             @Override
             public void onDownloadRequested(final VersionRepo.Entry entry) {

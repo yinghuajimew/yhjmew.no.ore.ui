@@ -40,6 +40,9 @@
     <string name="btn_pause">暂停</string>
     <string name="btn_resume">继续</string>
     <string name="btn_delete_download">刪除</string>
+    <string name="btn_process_this">處理</string>
+    <string name="title_choose_mode">處理這個安裝包</string>
+    <string name="msg_download_dir_fallback">沒有儲存權限，已改為儲存到應用私有目錄</string>
     <string name="title_delete_download">刪除檔案</string>
     <string name="msg_confirm_delete_download">删除 Minecraft %1$s？</string>
     <string name="msg_download_finished">下載完成: </string>

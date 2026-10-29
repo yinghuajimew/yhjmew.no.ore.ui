@@ -32,20 +32,68 @@ final class GameDownloader {
     private static final int NOTIF_ID = 2001;
     private static final String CHANNEL_ID = "game_download";
 
-    /** 下载目录：<外置私有目录>/Download/games */
+    /** 公共下载目录下的子文件夹名 */
+    private static final String PUBLIC_SUBDIR = "Minecraft_oreUI";
+
+    /**
+     * 下载目录：**公共** Download/Minecraft_oreUI/
+     *
+     * <p>原来放在 Android/data/<包名>/files/Download/games/，
+     * 那是应用私有目录 —— 卸载应用就没了，用文件管理器也不好找，
+     * 更没法直接丢给别的工具。
+     *
+     * <p>现在改到 /storage/emulated/0/Download/Minecraft_oreUI/。
+     * 写公共目录需要「所有文件访问权限」，主界面两个处理按钮
+     * 本来就会申请它，这里只需要在没权限时回退到私有目录兜底。
+     */
     static File dir(Context ctx) {
-        File d = new File(ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "games");
-        if (!d.exists()) {
-            d.mkdirs();
+        File pub = publicDir();
+        if (pub != null) {
+            if (!pub.exists()) {
+                pub.mkdirs();
+            }
+            if (pub.isDirectory() && pub.canWrite()) {
+                return pub;
+            }
         }
-        return d;
+        // 没有权限时兜底：私有目录至少能下，界面会提示实际路径
+        File base = ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (base == null) {
+            // 外部存储都没挂载，退到内部存储
+            base = new File(ctx.getFilesDir(), "games");
+        } else {
+            base = new File(base, "games");
+        }
+        if (!base.exists()) {
+            base.mkdirs();
+        }
+        return base;
     }
 
-    /** 给用户看的目录路径（界面上要显示出来，否则找不到文件） */
+    /** 公共下载目录；拿不到（无权限/存储未挂载）返回 null */
+    static File publicDir() {
+        try {
+            File root = Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS);
+            if (root == null) {
+                return null;
+            }
+            return new File(root, PUBLIC_SUBDIR);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** 是否真的用上了公共目录（界面据此提示权限） */
+    static boolean usingPublicDir(Context ctx) {
+        return dir(ctx).getAbsolutePath().startsWith(
+                Environment.getExternalStorageDirectory().getAbsolutePath() + "/Download/");
+    }
+
+    /** 给用户看的路径 */
     static String displayDir(Context ctx) {
         File d = dir(ctx);
         String p = d.getAbsolutePath();
-        // Android/data/... 这种路径太长，缩一下但保持可辨认
         int idx = p.indexOf("/Android/data/");
         if (idx > 0) {
             return p.substring(idx + 1);

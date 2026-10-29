@@ -40,6 +40,9 @@
     <string name="btn_pause">Pause</string>
     <string name="btn_resume">Resume</string>
     <string name="btn_delete_download">Delete</string>
+    <string name="btn_process_this">Process</string>
+    <string name="title_choose_mode">Process this package</string>
+    <string name="msg_download_dir_fallback">No storage permission, saving to app private folder</string>
     <string name="title_delete_download">Delete file</string>
     <string name="msg_confirm_delete_download">Delete Minecraft %1$s?</string>
     <string name="msg_download_finished">Download complete: </string>
