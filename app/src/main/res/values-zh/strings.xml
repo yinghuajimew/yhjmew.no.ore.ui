@@ -9,6 +9,9 @@
     <string name="signature_file_selection">签名文件选择：</string>
     <string name="custom_signaturebks_signature_files_only">自定义签名...(仅限 .bks 签名文件)</string>
     <string name="signature_settings">签名设置</string>
+    <string name="settings">设置</string>
+    <string name="settings_signature">签名</string>
+    <string name="settings_so">SO</string>
     <string name="sure">确定</string>
     <string name="switched_to">✅ 已切换为: </string>
     <string name="cancel">取消</string>

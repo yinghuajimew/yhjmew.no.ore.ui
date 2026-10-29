@@ -32,8 +32,6 @@ public class MainActivity extends Activity {
     private ScrollView scrollViewLog;
     private ProgressBar progressBar;
     private TextView tvProgressPercent;
-    private TextView btnSignConfig;
-    private TextView btnSoConfig;
 
     private static final int REQUEST_CODE_PERMISSION_STORAGE = 100;
     private static final int REQUEST_CODE_PERMISSION_ALL_FILES = 101;
@@ -76,8 +74,6 @@ public class MainActivity extends Activity {
         scrollViewLog = (ScrollView) findViewById(R.id.scroll_view_log);
         progressBar = (ProgressBar) findViewById(R.id.progress_bar);
         tvProgressPercent = (TextView) findViewById(R.id.tv_progress_percent);
-        btnSignConfig = (TextView) findViewById(R.id.btn_sign_config);
-        btnSoConfig = (TextView) findViewById(R.id.btn_so_config);
 
         signatureManager = new SignatureManager(this);
         packageDetector = new PackageDetector(this);
@@ -141,25 +137,11 @@ public class MainActivity extends Activity {
             }
         });
 
-        btnSignConfig.setOnClickListener(new View.OnClickListener() {
+        TextView btnSettings = (TextView) findViewById(R.id.btn_settings);
+        btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showSignConfigDialog();
-            }
-        });
-
-        btnSoConfig.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showSoConfigDialog();
-            }
-        });
-
-        TextView btnLanguage = (TextView) findViewById(R.id.btn_language);
-        btnLanguage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLanguageDrawer();
+                showSettingsDialog();
             }
         });
 
@@ -381,20 +363,35 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void showSignConfigDialog() {
+    /**
+     * 统一的设置面板：签名 + SO 放在同一个对话框里。
+     *
+     * <p>以前是两个独立按钮，用户想同时改签名和 SO 得点两次、关两次。
+     * 现在一次打开、一次确定，两边的选择一起落盘。
+     *
+     * <p>用 ScrollView 包一层：小屏 + 大字号时两个 RadioGroup 加说明文字
+     * 会超出屏幕，不包就点不到下面的选项。
+     */
+    private void showSettingsDialog() {
+        final float density = getResources().getDisplayMetrics().density;
+        int pad = (int) (20 * density);
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
         android.widget.LinearLayout container = new android.widget.LinearLayout(this);
         container.setOrientation(android.widget.LinearLayout.VERTICAL);
-        int padding = (int) (20 * getResources().getDisplayMetrics().density);
-        container.setPadding(padding, padding, padding, padding);
+        container.setPadding(pad, pad, pad, pad);
+        scroll.addView(container);
 
+        // ---------- 签名 ----------
         android.widget.TextView tvSignTitle = new android.widget.TextView(this);
         tvSignTitle.setText(getString(R.string.signature_file_selection));
         tvSignTitle.setTextSize(16f);
         tvSignTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
-        tvSignTitle.setPadding(0, 0, 0, 10);
+        tvSignTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvSignTitle.setPadding(0, 0, 0, (int) (8 * density));
         container.addView(tvSignTitle);
 
-        final android.widget.RadioGroup radioGroup = new android.widget.RadioGroup(this);
+        final android.widget.RadioGroup signGroup = new android.widget.RadioGroup(this);
         String[] signNames = new String[]{
                 getString(R.string.default_mt_signature),
                 getString(R.string.zihao_il_signature),
@@ -404,34 +401,87 @@ public class MainActivity extends Activity {
             android.widget.RadioButton rb = new android.widget.RadioButton(this);
             rb.setText(signNames[i]);
             rb.setId(i);
-            radioGroup.addView(rb);
+            signGroup.addView(rb);
         }
         if (signatureManager.getCurrentSignType() < 3) {
-            radioGroup.check(signatureManager.getCurrentSignType());
+            signGroup.check(signatureManager.getCurrentSignType());
         } else {
-            radioGroup.check(2);
+            signGroup.check(2);
         }
-        container.addView(radioGroup);
+        container.addView(signGroup);
+
+        // 自定义签名当前路径，选第三项时给个提示
+        final String customPath = signatureManager.getCustomSignFilePath();
+        if (customPath != null && customPath.length() > 0) {
+            android.widget.TextView tvSignPath = new android.widget.TextView(this);
+            tvSignPath.setText(getString(R.string.signature_file_path) + customPath);
+            tvSignPath.setTextSize(11f);
+            tvSignPath.setTextColor(android.graphics.Color.parseColor("#888888"));
+            tvSignPath.setPadding(0, 0, 0, (int) (12 * density));
+            container.addView(tvSignPath);
+        }
+
+        // ---------- 分隔线 ----------
+        View divider = new View(this);
+        android.widget.LinearLayout.LayoutParams dp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        dp.topMargin = (int) (8 * density);
+        dp.bottomMargin = (int) (14 * density);
+        divider.setLayoutParams(dp);
+        divider.setBackgroundColor(android.graphics.Color.parseColor("#CCCCCC"));
+        container.addView(divider);
+
+        // ---------- SO ----------
+        android.widget.TextView tvSoTitle = new android.widget.TextView(this);
+        tvSoTitle.setText(getString(R.string.so_selection));
+        tvSoTitle.setTextSize(16f);
+        tvSoTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
+        tvSoTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvSoTitle.setPadding(0, 0, 0, (int) (8 * density));
+        container.addView(tvSoTitle);
+
+        final android.widget.RadioGroup soGroup = new android.widget.RadioGroup(this);
+
+        android.widget.RadioButton rbStandalone = new android.widget.RadioButton(this);
+        rbStandalone.setText(getString(R.string.so_standalone_no_libpreloader));
+        rbStandalone.setId(1);                     // SO_TYPE_STANDALONE
+        soGroup.addView(rbStandalone);
+
+        android.widget.RadioButton rbWithPreloader = new android.widget.RadioButton(this);
+        rbWithPreloader.setText(getString(R.string.so_with_preloader_need_libpreloader));
+        rbWithPreloader.setId(0);                  // SO_TYPE_WITH_PRELOADER
+        soGroup.addView(rbWithPreloader);
+
+        soGroup.check(apkProcessor.getCurrentSoType());
+        container.addView(soGroup);
 
         new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.signature_settings))
-                .setView(container)
+                .setTitle(getString(R.string.settings))
+                .setView(scroll)
                 .setPositiveButton(getString(R.string.sure), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
-                        int selectedId = radioGroup.getCheckedRadioButtonId();
-
-                        if (selectedId == 2) {
-                            if (signatureManager.getCustomSignFilePath() != null && signatureManager.getCustomSignFilePath().length() > 0) {
+                        // ---- 签名 ----
+                        int selectedSign = signGroup.getCheckedRadioButtonId();
+                        if (selectedSign == 2) {
+                            if (signatureManager.getCustomSignFilePath() != null
+                                    && signatureManager.getCustomSignFilePath().length() > 0) {
                                 signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
                             }
                             openSignFilePicker();
                         } else {
-                            signatureManager.setCurrentSignType(selectedId);
-                            printLog(getString(R.string.switched_to) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
+                            signatureManager.setCurrentSignType(selectedSign);
+                            printLog(getString(R.string.switched_to)
+                                    + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
                         }
-
                         signatureManager.saveSignConfig();
+
+                        // ---- SO ----
+                        int selectedSo = soGroup.getCheckedRadioButtonId();
+                        apkProcessor.setCurrentSoType(selectedSo);
+                        apkProcessor.saveSoConfig();
+                        printLog(getString(R.string.switched_to)
+                                + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
                     }
                 })
                 .setNegativeButton(getString(R.string.cancel), null)
@@ -549,50 +599,6 @@ public class MainActivity extends Activity {
                 dialog.dismiss();
             }
         });
-    }
-
-    private void showSoConfigDialog() {
-        android.widget.LinearLayout container = new android.widget.LinearLayout(this);
-        container.setOrientation(android.widget.LinearLayout.VERTICAL);
-        int padding = (int) (20 * getResources().getDisplayMetrics().density);
-        container.setPadding(padding, padding, padding, padding);
-
-        android.widget.TextView tvSoTitle = new android.widget.TextView(this);
-        tvSoTitle.setText(getString(R.string.so_selection));
-        tvSoTitle.setTextSize(16f);
-        tvSoTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
-        tvSoTitle.setPadding(0, 0, 0, 10);
-        container.addView(tvSoTitle);
-
-        final android.widget.RadioGroup radioGroup = new android.widget.RadioGroup(this);
-
-        android.widget.RadioButton rbStandalone = new android.widget.RadioButton(this);
-        rbStandalone.setText(getString(R.string.so_standalone_no_libpreloader));
-        rbStandalone.setId(1); // SO_TYPE_STANDALONE
-        radioGroup.addView(rbStandalone);
-
-        android.widget.RadioButton rbWithPreloader = new android.widget.RadioButton(this);
-        rbWithPreloader.setText(getString(R.string.so_with_preloader_need_libpreloader));
-        rbWithPreloader.setId(0); // SO_TYPE_WITH_PRELOADER
-        radioGroup.addView(rbWithPreloader);
-
-        radioGroup.check(apkProcessor.getCurrentSoType());
-        container.addView(radioGroup);
-
-        new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.so_settings))
-                .setView(container)
-                .setPositiveButton(getString(R.string.sure), new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface dialog, int which) {
-                        int selectedId = radioGroup.getCheckedRadioButtonId();
-                        apkProcessor.setCurrentSoType(selectedId);
-                        apkProcessor.saveSoConfig();
-                        printLog(getString(R.string.switched_to) + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
-                    }
-                })
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show();
     }
 
     private void showCloneConfigDialog(final Uri apkUri) {
@@ -751,12 +757,51 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * 语言选择抽屉：从右侧滑出，选中即生效并重建界面。
+     * 语言选择行：嵌在对话框中，点击展开成下拉列表。
      *
-     * <p>不用 DrawerLayout（项目没有 appcompat 的依赖装配，minSdk 14 也够不到
-     * Material 的组件），这里用 Dialog + 位移动画实现同样的手感。
+     * <p>原本是独立的滑出抽屉，但语言属于低频设置，单独占一个主按钮太浪费
+     * 右上角的空间，所以收进关于页。展开用点击切换，不弹二级对话框，
+     * 免得「对话框套对话框」在低版本上返回键行为混乱。
+     *
+     * @param closeHost 关闭外层对话框（选完语言要关掉它再重建界面）
      */
-    private void showLanguageDrawer() {
+    private View buildLanguageRow(final Runnable closeHost) {
+        final float density = getResources().getDisplayMetrics().density;
+        final boolean[] expanded = {false};
+
+        final android.widget.LinearLayout wrap = new android.widget.LinearLayout(this);
+        wrap.setOrientation(android.widget.LinearLayout.VERTICAL);
+
+        // 触发这一行：左边标题，右边当前语言
+        final android.widget.LinearLayout header = new android.widget.LinearLayout(this);
+        header.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int hp = (int) (4 * density);
+        header.setPadding(0, hp, 0, hp);
+
+        android.widget.TextView tvTitle = new android.widget.TextView(this);
+        tvTitle.setText(getString(R.string.language_settings));
+        tvTitle.setTextSize(15f);
+        tvTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
+        tvTitle.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        header.addView(tvTitle);
+
+        final int current = AppLocale.getMode(this);
+
+        final android.widget.TextView tvValue = new android.widget.TextView(this);
+        tvValue.setText(getString(AppLocale.modeLabelRes(current)) + "  ▾");
+        tvValue.setTextSize(14f);
+        tvValue.setTextColor(android.graphics.Color.parseColor("#666666"));
+        header.addView(tvValue);
+
+        wrap.addView(header);
+
+        // 展开区
+        final android.widget.LinearLayout options = new android.widget.LinearLayout(this);
+        options.setOrientation(android.widget.LinearLayout.VERTICAL);
+        options.setVisibility(View.GONE);
+
         final int[] modes = {
                 AppLocale.MODE_SYSTEM,
                 AppLocale.MODE_ZH_CN,
@@ -764,129 +809,72 @@ public class MainActivity extends Activity {
                 AppLocale.MODE_ZH_HK,
                 AppLocale.MODE_EN
         };
-        final int current = AppLocale.getMode(this);
 
-        final android.widget.LinearLayout panel = new android.widget.LinearLayout(this);
-        panel.setOrientation(android.widget.LinearLayout.VERTICAL);
-        panel.setBackgroundColor(android.graphics.Color.parseColor("#FFFFFF"));
-        int pad = (int) (16 * getResources().getDisplayMetrics().density);
-        panel.setPadding(pad, pad, pad, pad);
+        // 跟随系统时把系统实际给的 Locale 显示出来，方便排查"为什么是这句语言"
+        String sysHint = current == AppLocale.MODE_SYSTEM
+                ? " (" + Locale.getDefault().toString() + ")"
+                : "";
 
-        android.widget.TextView title = new android.widget.TextView(this);
-        title.setText(getString(R.string.language_settings));
-        title.setTextSize(17f);
-        title.setTextColor(android.graphics.Color.parseColor("#000000"));
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        android.widget.LinearLayout.LayoutParams tp = new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-        tp.bottomMargin = pad;
-        title.setLayoutParams(tp);
-        panel.addView(title);
-
-        final android.app.Dialog dialog = new android.app.Dialog(this);
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-
-        // 当前选中项用左侧竖条标出来，避免用单选项时把抽屉撑得很宽
         for (int i = 0; i < modes.length; i++) {
             final int mode = modes[i];
 
-            android.widget.LinearLayout row = new android.widget.LinearLayout(this);
-            row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            int rowPad = (int) (10 * getResources().getDisplayMetrics().density);
-            row.setPadding(rowPad, rowPad, rowPad, rowPad);
+            final android.widget.TextView row = new android.widget.TextView(this);
+            String label = getString(AppLocale.modeLabelRes(mode));
+            if (mode == AppLocale.MODE_SYSTEM) {
+                label += sysHint;
+            }
+            row.setText(label);
+            row.setTextSize(14f);
+            int rp = (int) (8 * density);
+            row.setPadding((int) (12 * density), rp, rp, rp);
+            row.setTextColor(android.graphics.Color.parseColor("#000000"));
             row.setBackgroundColor(mode == current
                     ? android.graphics.Color.parseColor("#F0F0F0")
-                    : android.graphics.Color.parseColor("#FFFFFF"));
-
-            View bar = new View(this);
-            int barW = (int) (3 * getResources().getDisplayMetrics().density);
-            int barH = (int) (18 * getResources().getDisplayMetrics().density);
-            android.widget.LinearLayout.LayoutParams bp =
-                    new android.widget.LinearLayout.LayoutParams(barW, barH);
-            bp.rightMargin = rowPad;
-            bar.setLayoutParams(bp);
-            bar.setBackgroundColor(mode == current
-                    ? android.graphics.Color.parseColor("#000000")
                     : android.graphics.Color.TRANSPARENT);
-            row.addView(bar);
-
-            android.widget.TextView label = new android.widget.TextView(this);
-            label.setText(getString(AppLocale.modeLabelRes(mode)));
-            label.setTextSize(15f);
-            label.setTextColor(android.graphics.Color.parseColor("#000000"));
-            label.setTypeface(null, mode == current
+            row.setTypeface(null, mode == current
                     ? android.graphics.Typeface.BOLD
                     : android.graphics.Typeface.NORMAL);
-            row.addView(label);
 
             row.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    dialog.dismiss();
-                    if (mode != AppLocale.getMode(MainActivity.this)) {
-                        AppLocale.setMode(MainActivity.this, mode);
-                        // 重建 Activity：资源、已 inflate 的控件、日志文本都会重来。
-                        // recreate() 在个别 ROM 上不刷新资源，所以先重设一次，
-                        // 失败再退回手动重启一个 Intent。
-                        AppLocale.apply(MainActivity.this);
-                        try {
-                            recreate();
-                        } catch (Throwable t) {
-                            Intent restart = new Intent(MainActivity.this, MainActivity.class);
-                            restart.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(restart);
-                            finish();
-                        }
+                    if (mode == AppLocale.getMode(MainActivity.this)) {
+                        options.setVisibility(View.GONE);
+                        expanded[0] = false;
+                        return;
+                    }
+                    AppLocale.setMode(MainActivity.this, mode);
+                    if (closeHost != null) {
+                        closeHost.run();
+                    }
+                    AppLocale.apply(MainActivity.this);
+                    try {
+                        recreate();
+                    } catch (Throwable t) {
+                        Intent restart = new Intent(MainActivity.this, MainActivity.class);
+                        restart.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(restart);
+                        finish();
                     }
                 }
             });
-            panel.addView(row);
+            options.addView(row);
         }
 
-        // 跟随系统时把"系统实际给的是什么"显示出来，便于排查
-        if (current == AppLocale.MODE_SYSTEM) {
-            android.widget.TextView hint = new android.widget.TextView(this);
-            hint.setText(Locale.getDefault().toString());
-            hint.setTextSize(11f);
-            hint.setTextColor(android.graphics.Color.parseColor("#888888"));
-            int hp = (int) (10 * getResources().getDisplayMetrics().density);
-            hint.setPadding(hp, hp, hp, 0);
-            panel.addView(hint);
-        }
+        wrap.addView(options);
 
-        dialog.setContentView(panel);
+        header.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                expanded[0] = !expanded[0];
+                options.setVisibility(expanded[0] ? View.VISIBLE : View.GONE);
+                tvValue.setText(getString(AppLocale.modeLabelRes(current))
+                        + (expanded[0] ? "  ▴" : "  ▾"));
+            }
+        });
 
-        android.view.Window win = dialog.getWindow();
-        if (win != null) {
-            win.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
-                    android.graphics.Color.TRANSPARENT));
-
-            android.view.WindowManager.LayoutParams lp = win.getAttributes();
-            lp.gravity = android.view.Gravity.RIGHT | android.view.Gravity.TOP;
-            lp.width = (int) (240 * getResources().getDisplayMetrics().density);
-            lp.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
-            lp.dimAmount = 0.35f;
-            win.setAttributes(lp);
-            win.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-
-            // 从右侧滑入
-            win.setWindowAnimations(android.R.style.Animation_Dialog);
-            win.getDecorView().setTranslationX(
-                    win.getDecorView().getWidth()); // 部分 ROM 上需要预置初值
-        }
-
-        dialog.show();
-
-        // show() 之后再跑一次位移动画（不同 ROM 对窗口动画的支持不一致）
-        if (win != null) {
-            final View decor = win.getDecorView();
-            int w = (int) (240 * getResources().getDisplayMetrics().density);
-            decor.setTranslationX(w);
-            decor.animate().translationX(0f).setDuration(200).start();
-        }
+        return wrap;
     }
 
     private void showAboutDialog() {
@@ -958,9 +946,37 @@ public class MainActivity extends Activity {
         btnCheckUpdate.setLayoutParams(btnParams);
         container.addView(btnCheckUpdate);
 
+        final android.app.AlertDialog[] dialogRef = new android.app.AlertDialog[1];
+
+        // 语言：低频设置，收在关于页里，点一下展开成列表
+        android.widget.LinearLayout langRow = (android.widget.LinearLayout) buildLanguageRow(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        if (dialogRef[0] != null && dialogRef[0].isShowing()) {
+                            dialogRef[0].dismiss();
+                        }
+                    }
+                });
+        container.addView(langRow);
+
+        // 分隔线（语言与自动更新之间）
+        View langDivider = new View(this);
+        android.widget.LinearLayout.LayoutParams ldp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        ldp.topMargin = (int) (12 * getResources().getDisplayMetrics().density);
+        ldp.bottomMargin = (int) (12 * getResources().getDisplayMetrics().density);
+        langDivider.setLayoutParams(ldp);
+        langDivider.setBackgroundColor(android.graphics.Color.parseColor("#CCCCCC"));
+        container.addView(langDivider);
+
+        // 包一层 ScrollView：展开语言列表 + 小屏大字时内容会超高
+        android.widget.ScrollView aboutScroll = new android.widget.ScrollView(this);
+        aboutScroll.addView(container);
+
         final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
                 .setTitle(getString(R.string.about))
-                .setView(container)
+                .setView(aboutScroll)
                 .setPositiveButton(getString(R.string.sure), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
@@ -979,6 +995,7 @@ public class MainActivity extends Activity {
                 })
                 .create();
 
+        dialogRef[0] = dialog;
         dialog.show();
 
         // 立即检查更新按钮点击事件

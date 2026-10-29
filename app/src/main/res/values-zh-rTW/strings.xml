@@ -292,6 +292,9 @@
     <string name="signature_file_selected">已選擇簽章檔案:</string>
     <string name="signature_file_selection">簽章檔案選擇：</string>
     <string name="signature_settings">簽章設定</string>
+    <string name="settings">設定</string>
+    <string name="settings_signature">簽章</string>
+    <string name="settings_so">SO</string>
     <string name="signature_signature_file_size_is_0_bytes">[簽章] 簽章檔案大小為0字節:</string>
     <string name="signature_supports_switching_between_multiple_sign">簽章：支持多種簽章檔案切換。&lt;br&gt;&lt;br&gt;</string>
     <string name="signature_unable_to_get_private_key_entry_alias">[簽章] 無法獲取私鑰條目 (別名:</string>

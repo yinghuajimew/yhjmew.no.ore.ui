@@ -30,7 +30,7 @@
             android:layout_marginBottom="8dp" />
 
         <TextView
-            android:id="@+id/btn_sign_config"
+            android:id="@+id/btn_settings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_black_border"
@@ -38,40 +38,11 @@
             android:paddingTop="6dp"
             android:paddingRight="12dp"
             android:paddingBottom="6dp"
-            android:text="@string/signature_settings"
-            android:textColor="#000000"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/btn_so_config"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_black_border"
-            android:paddingLeft="12dp"
-            android:paddingTop="6dp"
-            android:paddingRight="12dp"
-            android:paddingBottom="6dp"
-            android:text="@string/select_so"
+            android:text="@string/settings"
             android:textColor="#000000"
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/btn_language"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_black_border"
-            android:paddingLeft="12dp"
-            android:paddingTop="6dp"
-            android:paddingRight="12dp"
-            android:paddingBottom="6dp"
-            android:text="@string/language_settings"
-            android:textColor="#000000"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginTop="8dp" />
     </LinearLayout>
 
     <!-- 原本居中的所有内容 -->
