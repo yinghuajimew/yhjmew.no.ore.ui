@@ -426,8 +426,8 @@ private boolean isVersionLowerThan(String current, String min) {
             return false;
         }
         
-        String[] currentParts = current.split("\\.");
-        String[] minParts = min.split("\\.");
+        String[] currentParts = sanitizeVersion(current).split("\\.");
+        String[] minParts = sanitizeVersion(min).split("\\.");
 
         int length = Math.max(currentParts.length, minParts.length);
         for (int i = 0; i < length; i++) {
@@ -539,10 +539,58 @@ private boolean isVersionLowerThan(String current, String min) {
         }
     }
 
+    /**
+     * 把版本号洗成纯数字点分形式，容忍常见脏数据。
+     *
+     * <p>原实现遇到 "v2.5"、"2.5-beta"、"2.5
+" 这类直接抛 NumberFormatException，
+     * 上层 catch 成 false —— 也就是"没有新版本"，用户永远收不到更新提示。
+     * 方向虽然安全（不会误强制更新），但会静默漏更新。
+     *
+     * <p>这里只做去掉前缀 v、截掉第一个非数字后缀、去空白三件事，
+     * 不做语义上的预发布判断 —— 本项目的版本号本来就是纯数字点分。
+     */
+    private String sanitizeVersion(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String v = raw.trim();
+        if (v.isEmpty()) {
+            return "";
+        }
+        // 去掉 v / V 前缀
+        if (v.charAt(0) == 'v' || v.charAt(0) == 'V') {
+            v = v.substring(1).trim();
+        }
+        // 截到第一个非法字符为止（-、+、空格、换行…）
+        int cut = v.length();
+        for (int i = 0; i < v.length(); i++) {
+            char c = v.charAt(i);
+            if (!(c >= '0' && c <= '9') && c != '.') {
+                cut = i;
+                break;
+            }
+        }
+        v = v.substring(0, cut);
+        // 去掉尾部多余的点
+        while (v.endsWith(".")) {
+            v = v.substring(0, v.length() - 1);
+        }
+        return v;
+    }
+
     private boolean isNewerVersion(String current, String latest) {
         try {
-            String[] currentParts = current.split("\\.");
-            String[] latestParts = latest.split("\\.");
+            String cur = sanitizeVersion(current);
+            String lat = sanitizeVersion(latest);
+            if (cur.isEmpty() || lat.isEmpty()) {
+                // 洗不出数字就没法按位比，退回字符串比较，
+                // 至少 update.json 写成 "v2.5" 时还能提示有新版
+                return latest != null && current != null
+                        && latest.compareTo(current) > 0;
+            }
+            String[] currentParts = cur.split("\\.");
+            String[] latestParts = lat.split("\\.");
 
             int length = Math.max(currentParts.length, latestParts.length);
             for (int i = 0; i < length; i++) {
