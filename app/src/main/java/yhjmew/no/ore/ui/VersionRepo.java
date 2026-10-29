@@ -85,28 +85,98 @@ final class VersionRepo {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                String result = null;
-                Exception last = null;
+                // 关键：API 要的不是 "1.26"，而是 "26." ——
+                // 去掉大版本前面的 "1."，末尾补一个点，并且必须带 m=1。
+                // 实测对比（同一天、同一台机器）：
+                //     s=1.26   &m=1&b=0  ->  查询失败
+                //     s=26.    &m=1&b=0  ->  22 条正式版
+                // 而精确版本号又是完整的 "1.21.132" 才能查到，很反直觉。
+                List<Q> candidates = buildQueries(query, fuzzy);
 
+                Exception last = null;
                 for (String host : API_HOSTS) {
-                    try {
-                        String url = host + "/search_version?s="
-                                + URLEncoder.encode(query, "UTF-8")
-                                + (fuzzy ? "&m=1" : "")
-                                + "&b=0";           // b=0 只要正式版
-                        String json = httpGet(url);
-                        List<Entry> list = parseList(json);
-                        // status 200 才算拿到；201 是「没有此版本」/「查询失败」
-                        callback.onResult(list, null);
-                        return;
-                    } catch (Exception e) {
-                        last = e;
+                    for (String q : candidates) {
+                        try {
+                            String url = host + "/search_version?s="
+                                    + URLEncoder.encode(q.s, "UTF-8")
+                                    + (q.fuzzy ? "&m=1" : "")
+                                    + "&b=0";           // b=0 只要正式版
+                            String json = httpGet(url);
+                            List<Entry> list = parseList(json);
+                            if (!list.isEmpty()) {
+                                callback.onResult(list, null);
+                                return;
+                            }
+                        } catch (Exception e) {
+                            last = e;
+                        }
                     }
                 }
-                callback.onResult(Collections.<Entry>emptyList(),
-                        last == null ? "unknown" : last.getMessage());
+                // 全都查空：不是错误，就是没有
+                callback.onResult(Collections.<Entry>emptyList(), null);
             }
         }).start();
+    }
+
+    /** 一次查询的各种等价写法，按命中率从高到低 */
+    private static final class Q {
+        final String s;
+        final boolean fuzzy;
+
+        Q(String s, boolean fuzzy) {
+            this.s = s;
+            this.fuzzy = fuzzy;
+        }
+    }
+
+    /**
+     * 把用户输入的版本号翻译成 API 认得的形式。
+     *
+     * <p>规则（全部实测得出）：
+     * <ul>
+     *   <li>精确版本 "1.21.132" → 原样查，能命中 1 条；</li>
+     *   <li>大版本 "1.26" / "26" → 变成 "26." 且带 m=1，能命中 22 条；</li>
+     *   <li>"1.26.60" → 先按大版本 "26." 模糊查，再退到精确；</li>
+     * </ul>
+     */
+    private static List<Q> buildQueries(String raw, boolean fuzzy) {
+        List<Q> out = new ArrayList<Q>();
+        String q = sanitizeQuery(raw);
+
+        if (q.isEmpty()) {
+            return out;
+        }
+
+        String[] parts = q.split("\\.");
+
+        // 两段（1.26）或者单段（26）→ 当大版本处理
+        if (parts.length <= 2) {
+            String minor = parts[parts.length - 1];
+            out.add(new Q(minor + ".", true));          // 26.  ← 最有效
+            out.add(new Q(q, true));                    // 1.26（兜底）
+            out.add(new Q(q, fuzzy));
+        } else {
+            // 三段及以上（1.26.60 / 1.21.132）→ 先大版本模糊，再精确
+            out.add(new Q(parts[1] + ".", true));       // 26.
+            out.add(new Q(q, fuzzy));                   // 1.26.60
+            out.add(new Q(q, false));                   // 精确
+        }
+        return out;
+    }
+
+    /** 去掉 v 前缀、多余空格 */
+    private static String sanitizeQuery(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String q = raw.trim();
+        if (q.startsWith("v") || q.startsWith("V")) {
+            q = q.substring(1).trim();
+        }
+        while (q.endsWith(".")) {
+            q = q.substring(0, q.length() - 1);
+        }
+        return q;
     }
 
     /** 只取最新一个正式版，用于「最新版本」入口 */
