@@ -86,9 +86,10 @@ final class GameDownloader {
     // ---------------- 任务管理 ----------------
 
     /** 所有进行中的任务，key 是版本号。静态的，界面重建也能拿到。 */
+    // 用 ConcurrentHashMap：Collections.synchronizedMap 在旧 Android 上不可用，
+    // 而下载线程和 UI 线程会同时读写这个表
     private static final java.util.Map<String, Task> RUNNING =
-            new java.util.Collections.synchronizedMap(
-                    new java.util.HashMap<String, Task>());
+            new java.util.concurrent.ConcurrentHashMap<String, Task>();
 
     /** 还有别的任务在跑就别停服务 */
     private static void maybeStopService(Context ctx) {
