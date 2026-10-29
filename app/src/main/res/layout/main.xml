@@ -52,13 +52,12 @@
         android:layout_centerInParent="true"
         android:orientation="vertical">
 
-        <!-- 顶部的两个按钮 -->
+        <!-- 顶部三个按钮：普通处理 / 下载游戏 / 共存处理 -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:orientation="horizontal"
-            android:layout_width="300dp"
             android:layout_marginBottom="20dp">
 
             <Button
