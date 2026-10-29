@@ -1,1 +1,5 @@
 /build
+
+# Python 临时脚本缓存
+__pycache__/
+*.pyc
