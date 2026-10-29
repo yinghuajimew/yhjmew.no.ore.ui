@@ -195,7 +195,7 @@ final class VersionPickerDialog {
                 final VersionRepo.Entry newest = latest.get(0);
 
                 // 1.26.60.4 -> 1.26
-                String[] parts = newest.versionAll.split("\.");
+                String[] parts = newest.versionAll.split("\\.");
                 final String major = parts.length >= 2 ? parts[0] + "." + parts[1] : newest.versionAll;
 
                 VersionRepo.searchOfficial(major, true, new VersionRepo.Callback() {
