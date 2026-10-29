@@ -387,7 +387,20 @@ public void checkUpdate(final UpdateCallback callback) {
         // 判断逻辑
         boolean isLowerThanMin = isVersionLowerThan(currentVersion, minVersion);
         notifyLog(context.getString(R.string.log_below_min_version) + isLowerThanMin);
-        
+
+        // 只有当「确实存在更新的版本」时才可能强制。
+        // 原来的写法是 if (forceUpdate || isLowerThanMin)，不校验版本高低：
+        // 已是最新版、甚至比 update.json 里的版本还新，照样弹强制更新框，
+        // 只能靠手动改 update.json 绕开 —— 这就是之前强制更新用不了的原因。
+        boolean hasNewVersion = isNewerVersion(currentVersion, latestVersion);
+        notifyLog(context.getString(R.string.title_there_is_new_version) + hasNewVersion);
+
+        if (!hasNewVersion) {
+            // 已是最新（或更新），不提更新，也就不存在强制。
+            notifyNoUpdate();
+            return;
+        }
+
         // 检查是否需要强制更新
         if (forceUpdate || isLowerThanMin) {
             notifyLog(context.getString(R.string.log_force_update));
@@ -395,16 +408,7 @@ public void checkUpdate(final UpdateCallback callback) {
             return;
         }
 
-        // 检查是否有新版本
-        boolean hasNewVersion = isNewerVersion(currentVersion, latestVersion);
-        notifyLog(context.getString(R.string.title_there_is_new_version) + hasNewVersion);
-        
-        if (hasNewVersion) {
-            notifyUpdateAvailable(latestVersion, sources, changelog, forceUpdate, isManual);
-        } else {
-            notifyLog(context.getString(R.string.log_is_latest));
-            notifyNoUpdate();
-        }
+        notifyUpdateAvailable(latestVersion, sources, changelog, forceUpdate, isManual);
 
     } catch (Exception e) {
         notifyError(context.getString(R.string.err_parse_update_failed) + e.getMessage());

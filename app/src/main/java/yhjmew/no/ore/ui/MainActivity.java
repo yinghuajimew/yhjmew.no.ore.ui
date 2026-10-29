@@ -765,6 +765,130 @@ public class MainActivity extends Activity {
      *
      * @param closeHost 关闭外层对话框（选完语言要关掉它再重建界面）
      */
+    /**
+     * 通用「设置行」：左边标题，右边当前值，整行可点。
+     *
+     * <p>关于页里原来有三种风格：系统 CheckBox（自带深色方块）、
+     * 满宽黑框按钮、以及语言那种左右布局。摆在一起很杂乱。
+     * 现在统一成这一种：一眼扫下来是"设置项列表"，而不是一堆控件。
+     *
+     * @param outValue 回传右侧那个 TextView，方便调用方点了之后更新显示值
+     */
+    private View buildSettingRow(String title, String value,
+                                 android.widget.TextView[] outValue,
+                                 View.OnClickListener onClick) {
+        float density = getResources().getDisplayMetrics().density;
+        int vPad = (int) (12 * density);
+
+        android.widget.LinearLayout row = new android.widget.LinearLayout(this);
+        row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, vPad, 0, vPad);
+        row.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+
+        android.widget.TextView tvTitle = new android.widget.TextView(this);
+        tvTitle.setText(title);
+        tvTitle.setTextSize(15f);
+        tvTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
+        tvTitle.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(tvTitle);
+
+        android.widget.TextView tvValue = new android.widget.TextView(this);
+        tvValue.setText(value + "  ▾");
+        tvValue.setTextSize(14f);
+        tvValue.setTextColor(android.graphics.Color.parseColor("#666666"));
+        row.addView(tvValue);
+
+        if (outValue != null && outValue.length > 0) {
+            outValue[0] = tvValue;
+        }
+        if (onClick != null) {
+            row.setOnClickListener(onClick);
+        }
+        return row;
+    }
+
+    /**
+     * 「动作行」：看起来和设置行一样，但右侧没有箭头，因为点它是执行而不是选值。
+     */
+    private View buildActionRow(String title, View.OnClickListener onClick) {
+        float density = getResources().getDisplayMetrics().density;
+        int vPad = (int) (12 * density);
+
+        android.widget.LinearLayout row = new android.widget.LinearLayout(this);
+        row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(0, vPad, 0, vPad);
+
+        android.widget.TextView tvTitle = new android.widget.TextView(this);
+        tvTitle.setText(title);
+        tvTitle.setTextSize(15f);
+        tvTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
+        tvTitle.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(tvTitle);
+
+        android.widget.TextView tvArrow = new android.widget.TextView(this);
+        tvArrow.setText("›");
+        tvArrow.setTextSize(18f);
+        tvArrow.setTextColor(android.graphics.Color.parseColor("#999999"));
+        row.addView(tvArrow);
+
+        if (onClick != null) {
+            row.setOnClickListener(onClick);
+        }
+        return row;
+    }
+
+    /**
+     * 更新方式选择：仅提醒 / 自动下载。
+     *
+     * <p>原来只有一个「启用自动更新」复选框，语义是二元的：勾上就自动下，
+     * 不勾就完全不提示 —— 中间那种"告诉我有新版本但别自己下"没法表达。
+     * 现在给两个明确选项。
+     */
+    private void showUpdatePolicyDialog(final android.widget.TextView tvValue) {
+        final boolean autoUpdate = getSharedPreferences("UpdateConfig", MODE_PRIVATE)
+                .getBoolean("auto_update_enabled", true);
+
+        final String[] options = {
+                getString(R.string.msg_update_auto),
+                getString(R.string.msg_update_notify_only)
+        };
+        final String[] descs = {
+                getString(R.string.msg_update_auto_desc),
+                getString(R.string.msg_update_notify_desc)
+        };
+        final boolean[] values = { true, false };
+
+        int checked = autoUpdate ? 0 : 1;
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.title_update_policy))
+                .setSingleChoiceItems(options, checked,
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface dialog, int which) {
+                                boolean auto = values[which];
+                                getSharedPreferences("UpdateConfig", MODE_PRIVATE)
+                                        .edit()
+                                        .putBoolean("auto_update_enabled", auto)
+                                        .apply();
+                                if (tvValue != null) {
+                                    tvValue.setText(options[which] + "  ▾");
+                                }
+                                printLog(getString(auto
+                                        ? R.string.log_auto_update_on
+                                        : R.string.log_auto_update_off));
+                                dialog.dismiss();
+                            }
+                        })
+                .setNegativeButton(getString(R.string.btn_cancel), null)
+                .setMessage(descs[checked])
+                .show();
+    }
+
     private View buildLanguageRow(final Runnable closeHost) {
         final float density = getResources().getDisplayMetrics().density;
         final boolean[] expanded = {false};
@@ -920,31 +1044,40 @@ public class MainActivity extends Activity {
         divider.setLayoutParams(dividerParams);
         container.addView(divider);
 
-        // 自动更新复选框
-        final android.widget.CheckBox checkBoxAutoUpdate = new android.widget.CheckBox(this);
-        checkBoxAutoUpdate.setText(getString(R.string.msg_enable_auto_update));
-        checkBoxAutoUpdate.setTextColor(android.graphics.Color.parseColor("#000000"));
-        checkBoxAutoUpdate.setTextSize(14f);
+        // ---------- 更新设置区 ----------
+        // 原来这里是一个系统 CheckBox + 一个满宽黑框按钮 + 一个语言行，
+        // 三种风格混在一起，视觉上很跳。现在统一成「设置行」：
+        // 左边标题、右边当前值、点击展开，与下面的语言行完全一致。
 
-        // 读取当前设置
-        android.content.SharedPreferences prefs = getSharedPreferences("UpdateConfig", MODE_PRIVATE);
-        boolean autoUpdateEnabled = prefs.getBoolean("auto_update_enabled", true); // 默认启用
-        checkBoxAutoUpdate.setChecked(autoUpdateEnabled);
+        final android.content.SharedPreferences prefs =
+                getSharedPreferences("UpdateConfig", MODE_PRIVATE);
+        final boolean autoUpdateEnabled = prefs.getBoolean("auto_update_enabled", true);
 
-        container.addView(checkBoxAutoUpdate);
+        // 更新方式：仅提醒 / 自动下载
+        final android.widget.TextView[] tvPolicyValue = new android.widget.TextView[1];
+        container.addView(buildSettingRow(
+                getString(R.string.title_update_policy),
+                getString(autoUpdateEnabled
+                        ? R.string.msg_update_auto
+                        : R.string.msg_update_notify_only),
+                tvPolicyValue,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        showUpdatePolicyDialog(tvPolicyValue[0]);
+                    }
+                }));
 
-        // 立即检查更新按钮
-        android.widget.Button btnCheckUpdate = new android.widget.Button(this);
-        btnCheckUpdate.setText(getString(R.string.btn_check_update));
-        btnCheckUpdate.setBackground(getResources().getDrawable(R.drawable.bg_black_border));
-        btnCheckUpdate.setTextColor(android.graphics.Color.parseColor("#000000"));
-        android.widget.LinearLayout.LayoutParams btnParams = new android.widget.LinearLayout.LayoutParams(
-        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        btnParams.topMargin = (int) (10 * getResources().getDisplayMetrics().density);
-        btnCheckUpdate.setLayoutParams(btnParams);
-        container.addView(btnCheckUpdate);
+        // 检查更新：与语言行一样是「点一下做事」，不占满宽
+        container.addView(buildActionRow(
+                getString(R.string.msg_update_check_now),
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        printLog(getString(R.string.log_update_checking_manual));
+                        checkForUpdates(true);
+                    }
+                }));
 
         final android.app.AlertDialog[] dialogRef = new android.app.AlertDialog[1];
 
@@ -960,16 +1093,6 @@ public class MainActivity extends Activity {
                 });
         container.addView(langRow);
 
-        // 分隔线（语言与自动更新之间）
-        View langDivider = new View(this);
-        android.widget.LinearLayout.LayoutParams ldp = new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1);
-        ldp.topMargin = (int) (12 * getResources().getDisplayMetrics().density);
-        ldp.bottomMargin = (int) (12 * getResources().getDisplayMetrics().density);
-        langDivider.setLayoutParams(ldp);
-        langDivider.setBackgroundColor(android.graphics.Color.parseColor("#CCCCCC"));
-        container.addView(langDivider);
-
         // 包一层 ScrollView：展开语言列表 + 小屏大字时内容会超高
         android.widget.ScrollView aboutScroll = new android.widget.ScrollView(this);
         aboutScroll.addView(container);
@@ -977,35 +1100,11 @@ public class MainActivity extends Activity {
         final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
                 .setTitle(getString(R.string.btn_about))
                 .setView(aboutScroll)
-                .setPositiveButton(getString(R.string.btn_ok), new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface dialog, int which) {
-                        // 保存自动更新设置
-                        android.content.SharedPreferences prefs = getSharedPreferences("UpdateConfig", MODE_PRIVATE);
-                        android.content.SharedPreferences.Editor editor = prefs.edit();
-                        editor.putBoolean("auto_update_enabled", checkBoxAutoUpdate.isChecked());
-                        editor.apply();
-
-                        if (checkBoxAutoUpdate.isChecked()) {
-                            printLog(getString(R.string.log_auto_update_on));
-                        } else {
-                            printLog(getString(R.string.log_auto_update_off));
-                        }
-                    }
-                })
+                .setPositiveButton(getString(R.string.btn_ok), null)
                 .create();
 
         dialogRef[0] = dialog;
         dialog.show();
-
-        // 立即检查更新按钮点击事件
-        btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                printLog(getString(R.string.log_update_checking_manual));
-                checkForUpdates(true);
-            }
-        });
     }
 
     private String resolveSignFilePath(Uri uri) {

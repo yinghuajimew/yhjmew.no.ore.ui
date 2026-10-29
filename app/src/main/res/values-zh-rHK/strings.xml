@@ -55,6 +55,14 @@
     <!-- ==================== 提示与说明 ==================== -->
     <string name="msg_auto_update_off_hint">自動更新已禁用，可在關於中啟用</string>
     <string name="msg_enable_auto_update">啟用自動更新</string>
+    <string name="msg_update_auto">自動下載</string>
+    <string name="msg_update_notify_only">僅提醒</string>
+    <string name="msg_update_notify_desc">發現新版本時提示，不自動下載</string>
+    <string name="msg_update_auto_desc">發現新版本時自動下載並提示安裝</string>
+    <string name="msg_update_check_now">檢查</string>
+    <string name="title_update_policy">更新方式</string>
+    <string name="msg_update_force_hint">此版本需要更新後才能繼續使用</string>
+    <string name="btn_update_later">稍後</string>
     <string name="msg_update_notification">顯示應用更新下載進度</string>
     <string name="msg_ask_install">更新包已下載完成，是否立即安裝？</string>
     <string name="msg_need_unknown_source">應用需要"安裝未知應用"權限才能安裝更新。

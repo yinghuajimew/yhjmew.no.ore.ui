@@ -55,6 +55,14 @@
     <!-- ==================== 提示与说明 ==================== -->
     <string name="msg_auto_update_off_hint">Automatic updates are disabled and can be enabled in "About".</string>
     <string name="msg_enable_auto_update">Enabling Automatic Updates</string>
+    <string name="msg_update_auto">Auto download</string>
+    <string name="msg_update_notify_only">Notify only</string>
+    <string name="msg_update_notify_desc">Show a reminder when a new version is out</string>
+    <string name="msg_update_auto_desc">Download and prompt to install automatically</string>
+    <string name="msg_update_check_now">Check now</string>
+    <string name="title_update_policy">Update policy</string>
+    <string name="msg_update_force_hint">This build requires a newer version</string>
+    <string name="btn_update_later">Later</string>
     <string name="msg_update_notification">Show app update download progress</string>
     <string name="msg_ask_install">The update package has been downloaded, do you want to install it now?</string>
     <string name="msg_need_unknown_source">The app requires \"Install unknown apps\" permission to install updates. \n\nPlease return after authorization, the dialog box will automatically close and the installation will begin.</string>
