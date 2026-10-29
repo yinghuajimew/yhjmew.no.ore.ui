@@ -137,6 +137,14 @@ public class MainActivity extends Activity {
             }
         });
 
+        Button btnDownloadGame = (Button) findViewById(R.id.btn_download_game);
+        btnDownloadGame.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showVersionPicker();
+            }
+        });
+
         TextView btnSettings = (TextView) findViewById(R.id.btn_settings);
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -149,6 +157,10 @@ public class MainActivity extends Activity {
         printLog(getString(R.string.log_current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
         printLog(getString(R.string.log_current_so_type) + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
 
+        // 清掉过时的安装包（比当前版本旧的）。
+        // 下好待装的那份会留下 —— 用户点一下就能装，不用重下。
+        updateManager.cleanupOldApks(currentAppVersion());
+
         // 检查自动更新设置
         android.content.SharedPreferences prefs = getSharedPreferences("UpdateConfig", MODE_PRIVATE);
         boolean autoUpdateEnabled = prefs.getBoolean("auto_update_enabled", true);
@@ -159,6 +171,61 @@ public class MainActivity extends Activity {
         } else {
             printLog(getString(R.string.msg_auto_update_off_hint));
         }
+
+        // 有下载好还没装的包，主动提示一次
+        showPendingInstallHintIfAny();
+    }
+
+    /** 当前应用的 versionName，用作「哪些下载包已经过时」的判断依据 */
+    private String currentAppVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "0.0.0";
+        }
+    }
+
+    /**
+     * 如果上次下载的更新包还在，提示用户可以直接装，不用重新下载。
+     *
+     * <p>对应「我们没推送更新，但他点一下就能装已下载的版本」这种情况：
+     * 用户点了稍后安装、或者从安装界面返回，包还在私有目录里。
+     */
+    private void showPendingInstallHintIfAny() {
+        if (updateManager == null) {
+            return;
+        }
+        final java.util.List<File> pending = updateManager.findPendingApks();
+        if (pending.isEmpty()) {
+            return;
+        }
+        final File apk = pending.get(0);
+        final String ver = UpdateManager.versionOfApk(apk);
+
+        // 已经装上的就别再提示了
+        if (!UpdateManager.isNewerVersionStatic(currentAppVersion(), ver)) {
+            printLog(getString(R.string.log_pending_apk_same) + ver);
+            return;
+        }
+
+        printLog(getString(R.string.log_pending_apk_found) + ver);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle(getString(R.string.title_pending_install))
+                        .setMessage(getString(R.string.msg_pending_install, ver))
+                        .setPositiveButton(getString(R.string.btn_install_now),
+                                new android.content.DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(android.content.DialogInterface d, int w) {
+                                        updateManager.installApk(apk);
+                                    }
+                                })
+                        .setNegativeButton(getString(R.string.btn_install_later), null)
+                        .show();
+            }
+        });
     }
 
     @Override
@@ -372,6 +439,49 @@ public class MainActivity extends Activity {
      * <p>用 ScrollView 包一层：小屏 + 大字号时两个 RadioGroup 加说明文字
      * 会超出屏幕，不包就点不到下面的选项。
      */
+    /**
+     * 打开版本选择器。
+     *
+     * <p>选好版本后走这里：先解析 OneDrive 中转链接拿到直链，
+     * 再交给下载器。下完不自动装，交给用户决定。
+     */
+    private void showVersionPicker() {
+        new VersionPickerDialog(this, new VersionPickerDialog.OnPickListener() {
+            @Override
+            public void onDownloadRequested(final VersionRepo.Entry entry) {
+                final String slug = VersionRepo.oneDriveSlug(entry);
+                if (slug == null) {
+                    printLog(getString(R.string.err_no_onedrive_link_hint));
+                    return;
+                }
+                printLog(getString(R.string.msg_searching) + entry.versionAll);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            final String direct = VersionRepo.resolveDirectLink(slug);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    new DownloadManagerDialog(MainActivity.this)
+                                            .startDownload(entry.versionAll, direct);
+                                }
+                            });
+                        } catch (Exception e) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    showErrorDialog(getString(R.string.err_no_download_link),
+                                            String.valueOf(e.getMessage()));
+                                }
+                            });
+                        }
+                    }
+                }).start();
+            }
+        }).show();
+    }
+
     private void showSettingsDialog() {
         final float density = getResources().getDisplayMetrics().density;
         int pad = (int) (20 * density);

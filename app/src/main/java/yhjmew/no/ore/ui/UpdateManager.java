@@ -450,6 +450,108 @@ private boolean isVersionLowerThan(String current, String min) {
     }
 }
 
+    /** 下载目录：<外置私有目录>/Download/updates */
+    private File getDownloadDir() {
+        File dir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "updates");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    /**
+     * 清扫下载目录里已经没用的安装包。
+     *
+     * <p>原来下载完就再也没人删过：用户点「稍后安装」之后，
+     * update_2.5.apk 这类文件会一直躺在私有目录里，每更新一次多一个，
+     * 越攒越多（一个包 4~5 MB，装几十个版本就上百 MB）。
+     *
+     * <p>但不能一刀切全删 —— 两种包得留着：
+     * <ol>
+     *   <li><b>比当前版本新的</b>：用户下好了，等着装。删了他得重下。
+     *       这种情况正是"我们没推送更新，但他点一下就能装已下载的版本"。</li>
+     *   <li><b>等于当前版本的</b>：那是刚才装完的，留着无害，
+     *       下次启动时自然变成"不高于当前版本"被清掉。</li>
+     * </ol>
+     * 只清**低于当前版本**的旧包。
+     *
+     * <p>为什么不在安装完立刻删：installApk 只是拉起系统安装界面，
+     * 我们无法知道用户装没装、什么时候装。删早了用户从安装器返回再点就失败。
+     *
+     * @param currentVersion 当前应用版本名，用来判断哪些包已经过时
+     */
+    public void cleanupOldApks(String currentVersion) {
+        try {
+            File[] files = getDownloadDir().listFiles();
+            if (files == null) {
+                return;
+            }
+            for (File f : files) {
+                if (f == null || !f.isFile()) {
+                    continue;
+                }
+                String name = f.getName();
+                // 只处理本工具产生的安装包
+                if (!name.startsWith("update_") || !name.endsWith(".apk")) {
+                    continue;
+                }
+                String ver = versionOfApk(f);
+                // 版本号 >= 当前版本 → 留着；否则是过时的包
+                if (isNewerVersion(currentVersion, ver) || ver.equals(currentVersion)) {
+                    continue;
+                }
+                if (f.delete()) {
+                    notifyLog(context.getString(R.string.log_cleaned_old_apk) + name);
+                }
+            }
+        } catch (Exception e) {
+            // 清理失败不影响主流程
+        }
+    }
+
+    /**
+     * 找出「已经下载好、还没安装」的更新包。
+     *
+     * <p>用户下载完点「稍后安装」，或从安装界面点返回，包会留在
+     * Download/updates/ 里。这时应该能直接用它安装，而不是重新下载 4~5 MB。
+     *
+     * <p>按修改时间倒序，最新的排前面。
+     */
+    public java.util.List<File> findPendingApks() {
+        java.util.List<File> result = new java.util.ArrayList<File>();
+        try {
+            File[] files = getDownloadDir().listFiles();
+            if (files == null) {
+                return result;
+            }
+            for (File f : files) {
+                if (f != null && f.isFile()
+                        && f.getName().startsWith("update_")
+                        && f.getName().endsWith(".apk")
+                        && f.length() > 0) {
+                    result.add(f);
+                }
+            }
+            java.util.Collections.sort(result, new java.util.Comparator<File>() {
+                @Override
+                public int compare(File a, File b) {
+                    return Long.valueOf(b.lastModified()).compareTo(a.lastModified());
+                }
+            });
+        } catch (Exception ignore) {
+        }
+        return result;
+    }
+
+    /** 这个包对应的更新版本号，取自文件名 update_<版本>.apk */
+    public static String versionOfApk(File apk) {
+        String n = apk.getName();
+        if (n.startsWith("update_") && n.endsWith(".apk")) {
+            return n.substring("update_".length(), n.length() - ".apk".length());
+        }
+        return n;
+    }
+
     public void installApk(File apkFile) {
     try {
         notifyLog(context.getString(R.string.log_start_install));
@@ -550,7 +652,7 @@ private boolean isVersionLowerThan(String current, String min) {
      * <p>这里只做去掉前缀 v、截掉第一个非数字后缀、去空白三件事，
      * 不做语义上的预发布判断 —— 本项目的版本号本来就是纯数字点分。
      */
-    private String sanitizeVersion(String raw) {
+    private static String sanitizeVersion(String raw) {
         if (raw == null) {
             return "";
         }
@@ -580,6 +682,14 @@ private boolean isVersionLowerThan(String current, String min) {
     }
 
     private boolean isNewerVersion(String current, String latest) {
+        return isNewerVersionStatic(current, latest);
+    }
+
+    /**
+     * 静态版本的本体，供外部（MainActivity）不持有实例时也能比较。
+     * 版本号清洗与比较逻辑和实例方法完全一致。
+     */
+    public static boolean isNewerVersionStatic(String current, String latest) {
         try {
             String cur = sanitizeVersion(current);
             String lat = sanitizeVersion(latest);

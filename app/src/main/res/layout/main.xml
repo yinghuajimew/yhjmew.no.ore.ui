@@ -58,29 +58,45 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:orientation="horizontal"
+            android:layout_width="300dp"
             android:layout_marginBottom="20dp">
 
             <Button
                 android:id="@+id/btn_select_mc"
-                android:layout_width="130dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_black_border"
                 android:text="@string/btn_normal_processing"
                 android:textColor="#000000"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:layout_marginRight="10dp" />
+                android:layout_marginRight="5dp" />
+
+            <Button
+                android:id="@+id/btn_download_game"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_black_border"
+                android:text="@string/btn_download_game"
+                android:textColor="#000000"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginLeft="5dp"
+                android:layout_marginRight="5dp" />
 
             <Button
                 android:id="@+id/btn_make_clone"
-                android:layout_width="130dp"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_black_border"
                 android:text="@string/btn_coexistence_processing"
                 android:textColor="#000000"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:layout_marginLeft="10dp" />
+                android:layout_marginLeft="5dp" />
         </LinearLayout>
 
         <!-- 进度百分比文本 -->
