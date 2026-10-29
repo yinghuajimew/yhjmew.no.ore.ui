@@ -95,7 +95,7 @@ final class VersionRepo {
 
                 Exception last = null;
                 for (String host : API_HOSTS) {
-                    for (String q : candidates) {
+                    for (Q q : candidates) {
                         try {
                             String url = host + "/search_version?s="
                                     + URLEncoder.encode(q.s, "UTF-8")
