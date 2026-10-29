@@ -145,19 +145,19 @@ public class MainActivity extends Activity {
             }
         });
 
-        printLog(getString(R.string.the_application_started_successfully_and_is_waitin));
-        printLog(getString(R.string.current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
-        printLog(getString(R.string.current_so_type) + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
+        printLog(getString(R.string.log_app_started));
+        printLog(getString(R.string.log_current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
+        printLog(getString(R.string.log_current_so_type) + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
 
         // 检查自动更新设置
         android.content.SharedPreferences prefs = getSharedPreferences("UpdateConfig", MODE_PRIVATE);
         boolean autoUpdateEnabled = prefs.getBoolean("auto_update_enabled", true);
 
         if (autoUpdateEnabled) {
-            printLog(getString(R.string.auto_update_checking));
+            printLog(getString(R.string.log_update_checking));
             checkForUpdates(false);
         } else {
-            printLog(getString(R.string.auto_update_disabled));
+            printLog(getString(R.string.msg_auto_update_off_hint));
         }
     }
 
@@ -167,7 +167,7 @@ public class MainActivity extends Activity {
 
         if (pendingInstallApk != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (getPackageManager().canRequestPackageInstalls()) {
-                printLog(getString(R.string.obtained_installation_permission_installing));
+                printLog(getString(R.string.log_install_perm_ok));
                 if (updateManager != null) {
                     updateManager.installApk(pendingInstallApk);
                 }
@@ -182,7 +182,7 @@ public class MainActivity extends Activity {
 
         if (requestCode == REQUEST_CODE_PERMISSION_ALL_FILES) {
             if (Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager()) {
-                printLog(getString(R.string.permission_granted_please_click_the_button_again_t));
+                printLog(getString(R.string.msg_perm_granted_retry));
             }
             return;
         }
@@ -193,11 +193,11 @@ public class MainActivity extends Activity {
                 String fileName = getFileNameFromUri(signUri);
 
                 if (fileName != null && !fileName.toLowerCase(Locale.getDefault()).endsWith(".bks")) {
-                    printLog(getString(R.string.only_signature_files_in_bks_format_are_supported_n) + fileName);
+                    printLog(getString(R.string.err_sign_need_bks) + fileName);
                     return;
                 }
 
-                printLog(getString(R.string.signature_file_selected) + fileName);
+                printLog(getString(R.string.log_sign_file_selected) + fileName);
 
                 String realPath = resolveSignFilePath(signUri);
 
@@ -205,14 +205,14 @@ public class MainActivity extends Activity {
                     File f = new File(realPath);
                     if (f.exists()) {
                         signatureManager.setCustomSignFilePath(realPath);
-                        printLog(getString(R.string.signature_file_path) + realPath);
+                        printLog(getString(R.string.log_sign_file_path) + realPath);
                     } else {
                         try {
                             String cachedPath = signatureManager.copySignFileToCache(signUri);
                             signatureManager.setCustomSignFilePath(cachedPath);
-                            printLog(getString(R.string.signature_file_cached) + cachedPath);
+                            printLog(getString(R.string.log_sign_file_cached) + cachedPath);
                         } catch (Exception e) {
-                            printLog(getString(R.string.failed_to_cache_signature_file) + Utils.getFullStackTrace(e));
+                            printLog(getString(R.string.err_cache_sign_failed) + Utils.getFullStackTrace(e));
                             return;
                         }
                     }
@@ -220,9 +220,9 @@ public class MainActivity extends Activity {
                     try {
                         String cachedPath = signatureManager.copySignFileToCache(signUri);
                         signatureManager.setCustomSignFilePath(cachedPath);
-                        printLog(getString(R.string.signature_file_cached) + cachedPath);
+                        printLog(getString(R.string.log_sign_file_cached) + cachedPath);
                     } catch (Exception e) {
-                        printLog(getString(R.string.failed_to_cache_signature_file) + Utils.getFullStackTrace(e));
+                        printLog(getString(R.string.err_cache_sign_failed) + Utils.getFullStackTrace(e));
                         return;
                     }
                 }
@@ -241,7 +241,7 @@ public class MainActivity extends Activity {
                 try {
                     detectedPkg = packageDetector.detectPackageNameFromApkUri(apkUri);
                 } catch (Exception e) {
-                    printLog(getString(R.string.failed_to_automatically_read_the_current_package_n) + Utils.getFullStackTrace(e));
+                    printLog(getString(R.string.err_read_pkg_failed) + Utils.getFullStackTrace(e));
                 }
 
                 if (detectedPkg != null && detectedPkg.length() > 0) {
@@ -252,22 +252,22 @@ public class MainActivity extends Activity {
 
                 currentCloneMaxLength = Math.min(currentDetectedPackageName.length(), SO_PKG_MAX_LENGTH);
 
-                printLog(getString(R.string.selected_files) + originalFileName);
-                printLog(getString(R.string.current_package_name_detected) + currentDetectedPackageName);
-                printLog(getString(R.string.the_maximum_length_of_this_coexistence_package_nam) + currentCloneMaxLength);
+                printLog(getString(R.string.log_selected_files) + originalFileName);
+                printLog(getString(R.string.log_pkg_detected) + currentDetectedPackageName);
+                printLog(getString(R.string.msg_clone_max_len) + currentCloneMaxLength);
 
                 if (currentPickMode == PICK_MODE_NORMAL) {
-                    printLog(getString(R.string.ready_to_start_normal_processing));
+                    printLog(getString(R.string.log_ready_normal));
                     processApkInBackground(apkUri, false, currentDetectedPackageName, currentDetectedPackageName);
                 } else if (currentPickMode == PICK_MODE_CLONE) {
                     if (detectedPkg == null || detectedPkg.length() == 0) {
-                        printLog(getString(R.string.unable_to_read_the_current_apk_package_name_and_en));
+                        printLog(getString(R.string.err_read_apk_pkg));
                     } else {
-                        printLog(getString(R.string.please_continue_to_enter_the_target_coexistence_pa));
+                        printLog(getString(R.string.msg_ask_continue_pkg));
                         showCloneConfigDialog(apkUri);
                     }
                 } else {
-                    printLog(getString(R.string.the_current_processing_mode_is_not_recognized));
+                    printLog(getString(R.string.err_mode_unknown));
                 }
 
                 currentPickMode = PICK_MODE_NONE;
@@ -319,7 +319,7 @@ public class MainActivity extends Activity {
     private boolean checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= 30) {
             if (!Environment.isExternalStorageManager()) {
-                printLog(getString(R.string.requires_all_file_access_permission_jumping_to_set));
+                printLog(getString(R.string.msg_need_all_files));
                 try {
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                     intent.setData(Uri.parse("package:" + getPackageName()));
@@ -333,7 +333,7 @@ public class MainActivity extends Activity {
             return true;
         } else {
             if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                printLog(getString(R.string.storage_permission_is_required_applying));
+                printLog(getString(R.string.msg_need_storage));
                 requestPermissions(new String[]{
                         Manifest.permission.READ_EXTERNAL_STORAGE,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -346,11 +346,11 @@ public class MainActivity extends Activity {
 
     private void openFilePicker() {
         if (currentPickMode == PICK_MODE_NORMAL) {
-            printLog(getString(R.string.normal_mode_opening_file_manager));
+            printLog(getString(R.string.log_normal_open_fm));
         } else if (currentPickMode == PICK_MODE_CLONE) {
-            printLog(getString(R.string.coexistence_mode_opening_file_manager));
+            printLog(getString(R.string.log_clone_open_fm));
         } else {
-            printLog(getString(R.string.opening_file_manager));
+            printLog(getString(R.string.log_opening_fm));
         }
 
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -359,7 +359,7 @@ public class MainActivity extends Activity {
         try {
             startActivityForResult(intent, REQUEST_CODE_SELECT_APK);
         } catch (Exception e) {
-            printLog(getString(R.string.failed_to_open_file_manager) + Utils.getFullStackTrace(e));
+            printLog(getString(R.string.err_open_fm_failed) + Utils.getFullStackTrace(e));
         }
     }
 
@@ -384,7 +384,7 @@ public class MainActivity extends Activity {
 
         // ---------- 签名 ----------
         android.widget.TextView tvSignTitle = new android.widget.TextView(this);
-        tvSignTitle.setText(getString(R.string.signature_file_selection));
+        tvSignTitle.setText(getString(R.string.title_signature_file_selection));
         tvSignTitle.setTextSize(16f);
         tvSignTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
         tvSignTitle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -393,9 +393,9 @@ public class MainActivity extends Activity {
 
         final android.widget.RadioGroup signGroup = new android.widget.RadioGroup(this);
         String[] signNames = new String[]{
-                getString(R.string.default_mt_signature),
-                getString(R.string.zihao_il_signature),
-                getString(R.string.custom_signaturebks_signature_files_only)
+                getString(R.string.btn_sign_mt_default),
+                getString(R.string.btn_sign_zihao_il),
+                getString(R.string.btn_sign_custom_bks)
         };
         for (int i = 0; i < signNames.length; i++) {
             android.widget.RadioButton rb = new android.widget.RadioButton(this);
@@ -414,7 +414,7 @@ public class MainActivity extends Activity {
         final String customPath = signatureManager.getCustomSignFilePath();
         if (customPath != null && customPath.length() > 0) {
             android.widget.TextView tvSignPath = new android.widget.TextView(this);
-            tvSignPath.setText(getString(R.string.signature_file_path) + customPath);
+            tvSignPath.setText(getString(R.string.log_sign_file_path) + customPath);
             tvSignPath.setTextSize(11f);
             tvSignPath.setTextColor(android.graphics.Color.parseColor("#888888"));
             tvSignPath.setPadding(0, 0, 0, (int) (12 * density));
@@ -433,7 +433,7 @@ public class MainActivity extends Activity {
 
         // ---------- SO ----------
         android.widget.TextView tvSoTitle = new android.widget.TextView(this);
-        tvSoTitle.setText(getString(R.string.so_selection));
+        tvSoTitle.setText(getString(R.string.title_so_selection));
         tvSoTitle.setTextSize(16f);
         tvSoTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
         tvSoTitle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -443,12 +443,12 @@ public class MainActivity extends Activity {
         final android.widget.RadioGroup soGroup = new android.widget.RadioGroup(this);
 
         android.widget.RadioButton rbStandalone = new android.widget.RadioButton(this);
-        rbStandalone.setText(getString(R.string.so_standalone_no_libpreloader));
+        rbStandalone.setText(getString(R.string.msg_so_standalone_desc));
         rbStandalone.setId(1);                     // SO_TYPE_STANDALONE
         soGroup.addView(rbStandalone);
 
         android.widget.RadioButton rbWithPreloader = new android.widget.RadioButton(this);
-        rbWithPreloader.setText(getString(R.string.so_with_preloader_need_libpreloader));
+        rbWithPreloader.setText(getString(R.string.msg_so_preloader_desc));
         rbWithPreloader.setId(0);                  // SO_TYPE_WITH_PRELOADER
         soGroup.addView(rbWithPreloader);
 
@@ -456,9 +456,9 @@ public class MainActivity extends Activity {
         container.addView(soGroup);
 
         new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.settings))
+                .setTitle(getString(R.string.btn_settings))
                 .setView(scroll)
-                .setPositiveButton(getString(R.string.sure), new android.content.DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.btn_ok), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         // ---- 签名 ----
@@ -471,7 +471,7 @@ public class MainActivity extends Activity {
                             openSignFilePicker();
                         } else {
                             signatureManager.setCurrentSignType(selectedSign);
-                            printLog(getString(R.string.switched_to)
+                            printLog(getString(R.string.log_switched_to)
                                     + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
                         }
                         signatureManager.saveSignConfig();
@@ -480,23 +480,23 @@ public class MainActivity extends Activity {
                         int selectedSo = soGroup.getCheckedRadioButtonId();
                         apkProcessor.setCurrentSoType(selectedSo);
                         apkProcessor.saveSoConfig();
-                        printLog(getString(R.string.switched_to)
+                        printLog(getString(R.string.log_switched_to)
                                 + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
                     }
                 })
-                .setNegativeButton(getString(R.string.cancel), null)
+                .setNegativeButton(getString(R.string.btn_cancel), null)
                 .show();
     }
 
     private void openSignFilePicker() {
-        printLog(getString(R.string.opening_signature_file_selector_bks_only));
+        printLog(getString(R.string.log_opening_sign_picker));
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("application/octet-stream");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         try {
             startActivityForResult(intent, REQUEST_CODE_SELECT_SIGN_FILE);
         } catch (Exception e) {
-            printLog(getString(R.string.failed_to_open_file_manager) + Utils.getFullStackTrace(e));
+            printLog(getString(R.string.err_open_fm_failed) + Utils.getFullStackTrace(e));
         }
     }
 
@@ -507,14 +507,14 @@ public class MainActivity extends Activity {
         container.setPadding(padding, padding, padding, padding);
 
         android.widget.TextView tvHint = new android.widget.TextView(this);
-        tvHint.setText(getString(R.string.please_enter_the_full_path_to_the_signature_file_a));
+        tvHint.setText(getString(R.string.msg_ask_sign_detail));
         tvHint.setTextColor(android.graphics.Color.parseColor("#333333"));
         tvHint.setTextSize(14f);
         tvHint.setPadding(0, 0, 0, 20);
         container.addView(tvHint);
 
         final android.widget.EditText editPath = new android.widget.EditText(this);
-        editPath.setHint(getString(R.string.signature_file_path_such_as_sdcardsignjks));
+        editPath.setHint(getString(R.string.hint_sign_path));
         editPath.setSingleLine(true);
         if (prefillPath != null && prefillPath.length() > 0) {
             editPath.setText(prefillPath);
@@ -524,28 +524,28 @@ public class MainActivity extends Activity {
         container.addView(editPath);
 
         final android.widget.EditText editAlias = new android.widget.EditText(this);
-        editAlias.setHint(getString(R.string.alias));
+        editAlias.setHint(getString(R.string.hint_alias));
         editAlias.setText(signatureManager.getCustomSignAlias());
         editAlias.setSingleLine(true);
         container.addView(editAlias);
 
         final android.widget.EditText editKeystorePassword = new android.widget.EditText(this);
-        editKeystorePassword.setHint(getString(R.string.keystore_password_open_signature_file));
+        editKeystorePassword.setHint(getString(R.string.hint_keystore_password));
         editKeystorePassword.setText(signatureManager.getCustomSignKeystorePassword());
         editKeystorePassword.setSingleLine(true);
         container.addView(editKeystorePassword);
 
         final android.widget.EditText editKeyPassword = new android.widget.EditText(this);
-        editKeyPassword.setHint(getString(R.string.alias_password_access_private_key));
+        editKeyPassword.setHint(getString(R.string.hint_alias_password));
         editKeyPassword.setText(signatureManager.getCustomSignKeyPassword());
         editKeyPassword.setSingleLine(true);
         container.addView(editKeyPassword);
 
         final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.custom_signature_configuration))
+                .setTitle(getString(R.string.title_custom_signature))
                 .setView(container)
-                .setPositiveButton(getString(R.string.sure), null)
-                .setNegativeButton(getString(R.string.cancel), null)
+                .setPositiveButton(getString(R.string.btn_ok), null)
+                .setNegativeButton(getString(R.string.btn_cancel), null)
                 .create();
 
         dialog.show();
@@ -559,18 +559,18 @@ public class MainActivity extends Activity {
                 String keyPassword = editKeyPassword.getText().toString().trim();
 
                 if (path.length() == 0) {
-                    printLog(getString(R.string.the_signature_file_path_cannot_be_empty));
+                    printLog(getString(R.string.err_sign_path_empty));
                     return;
                 }
 
                 if (!path.toLowerCase(Locale.getDefault()).endsWith(".bks")) {
-                    printLog(getString(R.string.only_signature_files_in_bks_format_are_supported_n) + path);
+                    printLog(getString(R.string.err_sign_need_bks) + path);
                     return;
                 }
 
                 File signFile = new File(path);
                 if (!signFile.exists()) {
-                    printLog(getString(R.string.the_signature_file_does_not_exist) + path);
+                    printLog(getString(R.string.err_sign_file_missing) + path);
                     return;
                 }
 
@@ -591,10 +591,10 @@ public class MainActivity extends Activity {
                 signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
 
                 signatureManager.saveSignConfig();
-                printLog(getString(R.string.custom_signature_saved));
-                printLog(getString(R.string.path) + signatureManager.getCustomSignFilePath());
-                printLog(getString(R.string.alias_1) + signatureManager.getCustomSignAlias());
-                printLog(getString(R.string.current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
+                printLog(getString(R.string.msg_custom_sign_saved));
+                printLog(getString(R.string.log_path) + signatureManager.getCustomSignFilePath());
+                printLog(getString(R.string.hint_alias_colon) + signatureManager.getCustomSignAlias());
+                printLog(getString(R.string.log_current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
 
                 dialog.dismiss();
             }
@@ -611,10 +611,10 @@ public class MainActivity extends Activity {
         container.setPadding(padding, padding, padding, padding);
 
         android.widget.TextView tvHint = new android.widget.TextView(this);
-        tvHint.setText(getString(R.string.current_package_name_detectedn) + sourcePkg
-                + getString(R.string.nnplease_enter_the_target_coexistence_package_name)
-                + getString(R.string.nmaximum_length) + maxLength
-                + getString(R.string.nso_androidmanifestxml_resourcesarsc_and_packagein));
+        tvHint.setText(getString(R.string.log_pkg_detected_nl) + sourcePkg
+                + getString(R.string.msg_ask_enter_pkg)
+                + getString(R.string.msg_max_length) + maxLength
+                + getString(R.string.msg_auto_handles));
         tvHint.setTextColor(android.graphics.Color.parseColor("#333333"));
         tvHint.setTextSize(14f);
         tvHint.setPadding(0, 0, 0, 30);
@@ -632,7 +632,7 @@ public class MainActivity extends Activity {
         container.addView(editText);
 
         int initialLen = sourcePkg.length();
-        tvCounter.setText(getString(R.string.current_word_count) + initialLen + " / " + maxLength);
+        tvCounter.setText(getString(R.string.msg_word_count) + initialLen + " / " + maxLength);
         if (initialLen > maxLength) {
             tvCounter.setTextColor(android.graphics.Color.RED);
         } else {
@@ -646,7 +646,7 @@ public class MainActivity extends Activity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 int len = s.length();
-                tvCounter.setText(getString(R.string.current_word_count) + len + " / " + maxLength);
+                tvCounter.setText(getString(R.string.msg_word_count) + len + " / " + maxLength);
                 if (len > maxLength) {
                     tvCounter.setTextColor(android.graphics.Color.RED);
                 } else {
@@ -659,10 +659,10 @@ public class MainActivity extends Activity {
         });
 
         final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.configure_coexistence_package_name))
+                .setTitle(getString(R.string.title_configure_clone_pkg))
                 .setView(container)
-                .setPositiveButton(getString(R.string.start), null)
-                .setNegativeButton(getString(R.string.cancel), null)
+                .setPositiveButton(getString(R.string.btn_start), null)
+                .setNegativeButton(getString(R.string.btn_cancel), null)
                 .create();
 
         dialog.show();
@@ -673,27 +673,27 @@ public class MainActivity extends Activity {
                 String newPkg = editText.getText().toString().trim();
 
                 if (newPkg.length() == 0) {
-                    printLog(getString(R.string.the_package_name_cannot_be_empty));
+                    printLog(getString(R.string.err_pkg_empty));
                     return;
                 }
 
                 if (newPkg.length() > maxLength) {
-                    printLog(getString(R.string.the_package_name_is_too_long_the_maximum_allowed_t) + maxLength + getString(R.string.characters));
+                    printLog(getString(R.string.err_pkg_too_long) + maxLength + getString(R.string.fmt_characters));
                     return;
                 }
 
                 if (!Utils.isValidPackageName(newPkg)) {
-                    printLog(getString(R.string.the_package_name_format_is_illegal_please_check_an));
+                    printLog(getString(R.string.err_pkg_illegal));
                     return;
                 }
 
                 if (sourcePkg.equals(newPkg)) {
-                    printLog(getString(R.string.the_target_coexistence_package_name_cannot_be_the_));
+                    printLog(getString(R.string.err_clone_pkg_same));
                     return;
                 }
 
-                printLog(getString(R.string.current_package_name) + sourcePkg);
-                printLog(getString(R.string.target_coexistence_package_name) + newPkg);
+                printLog(getString(R.string.log_current_pkg) + sourcePkg);
+                printLog(getString(R.string.log_target_clone_pkg) + newPkg);
                 dialog.dismiss();
                 processApkInBackground(apkUri, true, sourcePkg, newPkg);
             }
@@ -717,20 +717,20 @@ public class MainActivity extends Activity {
                                 msg = e.getClass().getSimpleName();
                             }
 
-                            updateLogSafe(getString(R.string.an_error_occurred) + msg);
+                            updateLogSafe(getString(R.string.err_generic) + msg);
 
                             Throwable cause = e.getCause();
                             if (cause != null) {
                                 String causeMsg = cause.getMessage();
                                 if (causeMsg != null && causeMsg.length() > 0 && !causeMsg.equals(msg)) {
-                                    updateLogSafe(getString(R.string.root_cause) + causeMsg);
+                                    updateLogSafe(getString(R.string.err_root_cause) + causeMsg);
                                 }
                                 Throwable rootCause = cause.getCause();
                                 if (rootCause != null) {
                                     String rootMsg = rootCause.getMessage();
                                     if (rootMsg != null && rootMsg.length() > 0
                                             && !rootMsg.equals(msg) && !rootMsg.equals(causeMsg)) {
-                                        updateLogSafe(getString(R.string.deep_reasons) + rootMsg);
+                                        updateLogSafe(getString(R.string.err_deep_reason) + rootMsg);
                                     }
                                 }
                             }
@@ -745,7 +745,7 @@ public class MainActivity extends Activity {
                                             .append(":").append(stack[i].getLineNumber())
                                             .append(")\n");
                                 }
-                                updateLogSafe(getString(R.string.top_of_stackn) + sb.toString());
+                                updateLogSafe(getString(R.string.err_stack_top) + sb.toString());
                             }
 
                             e.printStackTrace();
@@ -780,7 +780,7 @@ public class MainActivity extends Activity {
         header.setPadding(0, hp, 0, hp);
 
         android.widget.TextView tvTitle = new android.widget.TextView(this);
-        tvTitle.setText(getString(R.string.language_settings));
+        tvTitle.setText(getString(R.string.title_language));
         tvTitle.setTextSize(15f);
         tvTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
         tvTitle.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
@@ -889,14 +889,14 @@ public class MainActivity extends Activity {
         messageView.setTextColor(android.graphics.Color.parseColor("#000000"));
         messageView.setTextIsSelectable(true);
 
-        String htmlContent = getString(R.string.no_oreui_toolsbrbr) +
-                getString(R.string.purpose_modify_the_minecraft_installation_package_) +
-                getString(R.string.support_normal_processing_mode_and_automatic_coexi) +
-                getString(R.string.signature_supports_switching_between_multiple_sign) +
-                getString(R.string.qq_groupbr) +
-                getString(R.string.join_qq_group) +
-                getString(R.string.telegram_channelbr) +
-                getString(R.string.telegram_channel);
+        String htmlContent = getString(R.string.msg_about_title) +
+                getString(R.string.msg_about_purpose) +
+                getString(R.string.msg_about_support) +
+                getString(R.string.msg_about_signature) +
+                getString(R.string.msg_about_qq) +
+                getString(R.string.msg_about_qq_link) +
+                getString(R.string.msg_about_telegram) +
+                getString(R.string.msg_about_telegram_link);
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             messageView.setText(android.text.Html.fromHtml(htmlContent, android.text.Html.FROM_HTML_MODE_LEGACY));
@@ -922,7 +922,7 @@ public class MainActivity extends Activity {
 
         // 自动更新复选框
         final android.widget.CheckBox checkBoxAutoUpdate = new android.widget.CheckBox(this);
-        checkBoxAutoUpdate.setText(getString(R.string.enable_auto_update));
+        checkBoxAutoUpdate.setText(getString(R.string.msg_enable_auto_update));
         checkBoxAutoUpdate.setTextColor(android.graphics.Color.parseColor("#000000"));
         checkBoxAutoUpdate.setTextSize(14f);
 
@@ -935,7 +935,7 @@ public class MainActivity extends Activity {
 
         // 立即检查更新按钮
         android.widget.Button btnCheckUpdate = new android.widget.Button(this);
-        btnCheckUpdate.setText(getString(R.string.check_update_now));
+        btnCheckUpdate.setText(getString(R.string.btn_check_update));
         btnCheckUpdate.setBackground(getResources().getDrawable(R.drawable.bg_black_border));
         btnCheckUpdate.setTextColor(android.graphics.Color.parseColor("#000000"));
         android.widget.LinearLayout.LayoutParams btnParams = new android.widget.LinearLayout.LayoutParams(
@@ -975,9 +975,9 @@ public class MainActivity extends Activity {
         aboutScroll.addView(container);
 
         final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.about))
+                .setTitle(getString(R.string.btn_about))
                 .setView(aboutScroll)
-                .setPositiveButton(getString(R.string.sure), new android.content.DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.btn_ok), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         // 保存自动更新设置
@@ -987,9 +987,9 @@ public class MainActivity extends Activity {
                         editor.apply();
 
                         if (checkBoxAutoUpdate.isChecked()) {
-                            printLog(getString(R.string.auto_update_enabled_log));
+                            printLog(getString(R.string.log_auto_update_on));
                         } else {
-                            printLog(getString(R.string.auto_update_disabled_log));
+                            printLog(getString(R.string.log_auto_update_off));
                         }
                     }
                 })
@@ -1002,7 +1002,7 @@ public class MainActivity extends Activity {
         btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                printLog(getString(R.string.manually_checking_update));
+                printLog(getString(R.string.log_update_checking_manual));
                 checkForUpdates(true);
             }
         });
@@ -1034,7 +1034,7 @@ public class MainActivity extends Activity {
     private void setIndeterminateModeSafe(boolean isIndeterminate) {
         progressBar.setIndeterminate(isIndeterminate);
         if (isIndeterminate) {
-            tvProgressPercent.setText(getString(R.string.readingcalculating));
+            tvProgressPercent.setText(getString(R.string.log_reading));
         }
     }
 
@@ -1061,7 +1061,7 @@ public class MainActivity extends Activity {
     container.setPadding(padding, padding, padding, padding);
 
     android.widget.TextView tvVersion = new android.widget.TextView(this);
-    tvVersion.setText(getString(R.string.new_version_found) + newVersion);
+    tvVersion.setText(getString(R.string.title_new_version_found) + newVersion);
     tvVersion.setTextSize(16f);
     tvVersion.setTextColor(android.graphics.Color.parseColor("#000000"));
     tvVersion.setPadding(0, 0, 0, 15);
@@ -1070,7 +1070,7 @@ public class MainActivity extends Activity {
     // 显示跳过状态
     if (isVersionSkipped(newVersion)) {
         android.widget.TextView tvSkipped = new android.widget.TextView(this);
-        tvSkipped.setText(getString(R.string.you_have_skipped_this_version_before));
+        tvSkipped.setText(getString(R.string.log_version_skipped_before));
         tvSkipped.setTextSize(13f);
         tvSkipped.setTextColor(android.graphics.Color.parseColor("#FF9800"));
         tvSkipped.setPadding(0, 0, 0, 10);
@@ -1080,7 +1080,7 @@ public class MainActivity extends Activity {
     // 强制更新标签
     if (forceUpdate) {
         android.widget.TextView tvForce = new android.widget.TextView(this);
-        tvForce.setText(getString(R.string.this_version_is_a_mandatory_update));
+        tvForce.setText(getString(R.string.msg_force_update_tag));
         tvForce.setTextSize(14f);
         tvForce.setTextColor(android.graphics.Color.parseColor("#FF5722"));
         tvForce.setPadding(0, 0, 0, 10);
@@ -1088,26 +1088,26 @@ public class MainActivity extends Activity {
     }
 
     android.widget.TextView tvChangelog = new android.widget.TextView(this);
-    tvChangelog.setText(getString(R.string.update_contentn) + changelog);
+    tvChangelog.setText(getString(R.string.msg_update_content) + changelog);
     tvChangelog.setTextSize(14f);
     tvChangelog.setTextColor(android.graphics.Color.parseColor("#666666"));
     tvChangelog.setPadding(0, 0, 0, 20);
     container.addView(tvChangelog);
 
     android.widget.TextView tvSourceInfo = new android.widget.TextView(this);
-    tvSourceInfo.setText(getString(R.string.shared) + sources.size() + getString(R.string.download_sources_available));
+    tvSourceInfo.setText(getString(R.string.log_total_sources) + sources.size() + getString(R.string.fmt_sources_available));
     tvSourceInfo.setTextSize(13f);
     tvSourceInfo.setTextColor(android.graphics.Color.parseColor("#999999"));
     container.addView(tvSourceInfo);
 
     android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.new_version_available))
+            .setTitle(getString(R.string.title_new_version_available))
             .setView(container)
-            .setPositiveButton(getString(R.string.download_now), new android.content.DialogInterface.OnClickListener() {
+            .setPositiveButton(getString(R.string.btn_download_now), new android.content.DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(android.content.DialogInterface dialog, int which) {
                     clearSkippedVersion();  // 清除跳过记录
-                    printLog(getString(R.string.start_smart_download));
+                    printLog(getString(R.string.log_smart_download_start));
                     if (updateManager != null) {
                         updateManager.smartDownload(sources, "update_" + newVersion + ".apk");
                     }
@@ -1117,8 +1117,8 @@ public class MainActivity extends Activity {
     if (forceUpdate) {
         builder.setCancelable(false);
     } else {
-        builder.setNegativeButton(getString(R.string.reminder_later), null);
-        builder.setNeutralButton(getString(R.string.skip_this_version), new android.content.DialogInterface.OnClickListener() {
+        builder.setNegativeButton(getString(R.string.btn_remind_later_alt), null);
+        builder.setNeutralButton(getString(R.string.btn_skip_version), new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface dialog, int which) {
                 skipVersion(newVersion);
@@ -1144,13 +1144,13 @@ private void checkForUpdates(final boolean isManual) {
         public void onUpdateAvailable(String newVersion, List<UpdateManager.DownloadSource> sources, String changelog, boolean forceUpdate, boolean isManualCheck) {
             // 自动检查时，检查是否跳过了此版本
             if (!isManualCheck && !forceUpdate && isVersionSkipped(newVersion)) {
-                printLog(getString(R.string.version_skipped) + newVersion + getString(R.string.automatic_check));
+                printLog(getString(R.string.log_version_skipped) + newVersion + getString(R.string.msg_auto_check));
                 return;
             }
             
             // 手动检查或未跳过，显示更新对话框
             if (isManualCheck && isVersionSkipped(newVersion)) {
-                printLog(getString(R.string.manual_inspection_show_skipped_versions) + newVersion);
+                printLog(getString(R.string.log_show_skipped) + newVersion);
             }
             
             showUpdateDialog(newVersion, sources, changelog, forceUpdate);
@@ -1160,18 +1160,18 @@ private void checkForUpdates(final boolean isManual) {
         public void onNoUpdate() {
             if (isManual) {
                 // 手动检查时，显示提示
-                showToast(getString(R.string.it_is_currently_the_latest_version));
+                showToast(getString(R.string.log_is_latest));
             }
-            printLog(getString(R.string.it_is_currently_the_latest_version));
+            printLog(getString(R.string.log_is_latest));
         }
 
         @Override
         public void onCheckError(String error) {
             if (isManual) {
                 // 手动检查时，显示错误提示
-                showToast(getString(R.string.update_check_failed) + error);
+                showToast(getString(R.string.err_update_check_failed) + error);
             }
-            printLog(getString(R.string.update_check_failed) + error);
+            printLog(getString(R.string.err_update_check_failed) + error);
         }
 
         @Override
@@ -1188,7 +1188,7 @@ private void checkForUpdates(final boolean isManual) {
         @Override
         public void onDownloadError(String error) {
             dismissDownloadProgress();
-            showErrorDialog(getString(R.string.update_error), error);
+            showErrorDialog(getString(R.string.err_update_failed), error);
         }
 
         @Override
@@ -1218,8 +1218,8 @@ private void checkForUpdates() {
 
     private void showDownloadProgress() {
         downloadProgressDialog = new android.app.ProgressDialog(this);
-        downloadProgressDialog.setTitle(getString(R.string.downloading));
-        downloadProgressDialog.setMessage(getString(R.string.ready_to_download));
+        downloadProgressDialog.setTitle(getString(R.string.log_downloading));
+        downloadProgressDialog.setMessage(getString(R.string.log_ready_download));
         downloadProgressDialog.setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL);
         downloadProgressDialog.setCancelable(false);
         downloadProgressDialog.setMax(100);
@@ -1232,7 +1232,7 @@ private void checkForUpdates() {
             downloadProgressDialog.setProgress(progress);
 
             int percent = max > 0 ? (int) ((progress * 100.0f) / max) : 0;
-            downloadProgressDialog.setMessage(getString(R.string.downloaded) + percent + "% (" +
+            downloadProgressDialog.setMessage(getString(R.string.log_downloaded) + percent + "% (" +
                     formatFileSize(progress) + " / " + formatFileSize(max) + ")");
         }
     }
@@ -1249,9 +1249,9 @@ private void checkForUpdates() {
             if (!getPackageManager().canRequestPackageInstalls()) {
                 // 没有权限，先弹出引导对话框
                 new android.app.AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.requires_installation_permissions))
-                        .setMessage(getString(R.string.the_app_requires_the_install_unknown_app_permissio))
-                        .setPositiveButton(getString(R.string.to_authorize), new android.content.DialogInterface.OnClickListener() {
+                        .setTitle(getString(R.string.err_need_install_perm))
+                        .setMessage(getString(R.string.msg_need_unknown_source))
+                        .setPositiveButton(getString(R.string.btn_to_authorize), new android.content.DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(android.content.DialogInterface dialog, int which) {
                                 pendingInstallApk = apkFile; // 记录待安装文件
@@ -1260,7 +1260,7 @@ private void checkForUpdates() {
                                 startActivity(intent);
                             }
                         })
-                        .setNegativeButton(getString(R.string.cancel), null)
+                        .setNegativeButton(getString(R.string.btn_cancel), null)
                         .show();
                 return;
             }
@@ -1268,9 +1268,9 @@ private void checkForUpdates() {
 
         // 有权限，直接显示安装对话框
         new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.download_completed))
-                .setMessage(getString(R.string.the_update_package_has_been_downloaded_do_you_want))
-                .setPositiveButton(getString(R.string.install_now), new android.content.DialogInterface.OnClickListener() {
+                .setTitle(getString(R.string.log_download_done))
+                .setMessage(getString(R.string.msg_ask_install))
+                .setPositiveButton(getString(R.string.btn_install_now), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         if (updateManager != null) {
@@ -1278,7 +1278,7 @@ private void checkForUpdates() {
                         }
                     }
                 })
-                .setNegativeButton(getString(R.string.install_later), null)
+                .setNegativeButton(getString(R.string.btn_install_later), null)
                 .setCancelable(false)
                 .show();
     }
@@ -1287,7 +1287,7 @@ private void checkForUpdates() {
         new android.app.AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton(getString(R.string.sure), null)
+                .setPositiveButton(getString(R.string.btn_ok), null)
                 .show();
     }
 
@@ -1310,7 +1310,7 @@ private void checkForUpdates() {
         android.content.SharedPreferences.Editor editor = prefs.edit();
         editor.putString("skipped_version", version);
         editor.apply();
-        printLog(getString(R.string.skipped_version) + version);
+        printLog(getString(R.string.log_skipped_version) + version);
     }
 
 /** 清除跳过的版本记录 */
@@ -1329,7 +1329,7 @@ private void checkForUpdates() {
         container.setPadding(padding, padding, padding, padding);
 
         android.widget.TextView tvTitle = new android.widget.TextView(this);
-        tvTitle.setText(getString(R.string.must_update));
+        tvTitle.setText(getString(R.string.title_must_update));
         tvTitle.setTextSize(18f);
         tvTitle.setTextColor(android.graphics.Color.parseColor("#FF5722"));
         tvTitle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -1337,21 +1337,21 @@ private void checkForUpdates() {
         container.addView(tvTitle);
 
         android.widget.TextView tvMessage = new android.widget.TextView(this);
-        tvMessage.setText(getString(R.string.your_current_version_is_too_old_and_must_be_update) +
-                getString(R.string.current_version) + currentVersion + "\n" +
-                getString(R.string.minimum_version) + minVersion + "\n" +
-                getString(R.string.latest_version) + newVersion + "\n\n" +
-                getString(R.string.update_contentn) + changelog);
+        tvMessage.setText(getString(R.string.msg_too_old) +
+                getString(R.string.fmt_current_version) + currentVersion + "\n" +
+                getString(R.string.fmt_min_version) + minVersion + "\n" +
+                getString(R.string.fmt_latest_version) + newVersion + "\n\n" +
+                getString(R.string.msg_update_content) + changelog);
         tvMessage.setTextSize(14f);
         tvMessage.setTextColor(android.graphics.Color.parseColor("#333333"));
         container.addView(tvMessage);
 
         new android.app.AlertDialog.Builder(this)
                 .setView(container)
-                .setPositiveButton(getString(R.string.update_now), new android.content.DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.btn_update_now), new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
-                        printLog(getString(R.string.forced_update_start_downloading));
+                        printLog(getString(R.string.log_force_update_start));
                         if (updateManager != null) {
                             updateManager.smartDownload(sources, "update_" + newVersion + ".apk");
                         }

@@ -69,13 +69,13 @@ public class SignatureManager {
      */
     public String getSignDisplayName(int type) {
         if (type == SIGN_TYPE_MT) {
-            return context.getString(R.string.default_mt_signature);
+            return context.getString(R.string.btn_sign_mt_default);
         } else if (type == SIGN_TYPE_ZIHAO_IL) {
-            return context.getString(R.string.zihao_il_signature);
+            return context.getString(R.string.btn_sign_zihao_il);
         } else if (type == SIGN_TYPE_CUSTOM) {
-            return context.getString(R.string.custom_signature);
+            return context.getString(R.string.btn_custom_signature);
         }
-        return context.getString(R.string.unknown_signature);
+        return context.getString(R.string.err_sign_unknown);
     }
 
     /**
@@ -104,22 +104,22 @@ public class SignatureManager {
                 ksType = "BKS";
             } else if (currentSignType == SIGN_TYPE_CUSTOM) {
                 if (customSignFilePath == null || customSignFilePath.length() == 0) {
-                    throw new Exception(context.getString(R.string.signature_custom_signature_file_path_is_not_set_pl));
+                    throw new Exception(context.getString(R.string.err_custom_sign_unset));
                 }
 
                 File signFile = new File(customSignFilePath);
                 if (!signFile.exists()) {
-                    throw new Exception(context.getString(R.string.signature_custom_signature_file_does_not_exist) + customSignFilePath + context.getString(R.string.nplease_check_whether_the_path_is_correct_or_resel));
+                    throw new Exception(context.getString(R.string.err_custom_sign_missing) + customSignFilePath + context.getString(R.string.msg_check_path));
                 }
 
                 if (signFile.length() == 0) {
-                    throw new Exception(context.getString(R.string.signature_signature_file_size_is_0_bytes) + customSignFilePath + context.getString(R.string.nthe_file_may_be_corrupted_or_copied_incorrectly));
+                    throw new Exception(context.getString(R.string.err_sign_size_0) + customSignFilePath + context.getString(R.string.msg_file_maybe_corrupt));
                 }
 
                 try {
                     is = new FileInputStream(signFile);
                 } catch (Exception e) {
-                    throw new RuntimeException(context.getString(R.string.signature_unable_to_read_signature_file) + customSignFilePath + context.getString(R.string.nreason) + e);
+                    throw new RuntimeException(context.getString(R.string.err_sign_unreadable) + customSignFilePath + context.getString(R.string.err_reason_nl) + e);
                 }
 
                 String fileName = signFile.getName();
@@ -128,16 +128,16 @@ public class SignatureManager {
                 keystorePassword = customSignKeystorePassword;
                 keyPassword = customSignKeyPassword;
             } else {
-                throw new Exception(context.getString(R.string.signature_unknown_signature_type) + currentSignType);
+                throw new Exception(context.getString(R.string.err_sign_type_unknown) + currentSignType);
             }
 
             try {
                 ks = KeyStore.getInstance(ksType);
                 ks.load(is, keystorePassword.toCharArray());
             } catch (Exception e) {
-                throw new RuntimeException(context.getString(R.string.signature_unable_to_load_keystore_type) + ksType + ")\n"
-                        + context.getString(R.string.possible_reasons_the_keystore_password_is_wrong_or)
-                        + context.getString(R.string.detailed) + e);
+                throw new RuntimeException(context.getString(R.string.err_keystore_load) + ksType + ")\n"
+                        + context.getString(R.string.err_why_keystore)
+                        + context.getString(R.string.err_detailed) + e);
             }
 
             KeyStore.PasswordProtection keyPasswordProtection = new KeyStore.PasswordProtection(keyPassword.toCharArray());
@@ -146,14 +146,14 @@ public class SignatureManager {
             try {
                 keyEntry = (KeyStore.PrivateKeyEntry) ks.getEntry(alias, keyPasswordProtection);
             } catch (Exception e) {
-                throw new RuntimeException(context.getString(R.string.signature_unable_to_get_private_key_entry_alias) + alias + ")\n"
-                        + context.getString(R.string.possible_reasons_the_alias_password_is_wrong_or_th)
-                        + context.getString(R.string.detailed) + e);
+                throw new RuntimeException(context.getString(R.string.err_alias_missing) + alias + ")\n"
+                        + context.getString(R.string.err_why_alias)
+                        + context.getString(R.string.err_detailed) + e);
             }
 
             if (keyEntry == null) {
-                throw new RuntimeException(context.getString(R.string.signature_alias_not_found_in_signature_file) + alias + "\n"
-                        + context.getString(R.string.please_make_sure_the_alias_is_spelled_correctly_or));
+                throw new RuntimeException(context.getString(R.string.err_alias_not_found) + alias + "\n"
+                        + context.getString(R.string.msg_ask_alias_check));
             }
 
             PrivateKey privateKey = keyEntry.getPrivateKey();
@@ -177,7 +177,7 @@ public class SignatureManager {
 
                 signer.sign();
             } catch (Exception e) {
-                throw new RuntimeException(context.getString(R.string.signature_apk_signing_process_failedndetails) + e);
+                throw new RuntimeException(context.getString(R.string.err_sign_process_failed) + e);
             }
 
         } finally {
@@ -202,14 +202,14 @@ public class SignatureManager {
      */
     public String copySignFileToCache(Uri signUri) throws Exception {
         if (signUri == null) {
-            throw new Exception(context.getString(R.string.signature_cache_uri_is_null_and_the_signature_file));
+            throw new Exception(context.getString(R.string.err_cache_uri_null));
         }
 
         File cacheDir = context.getExternalCacheDir();
         if (cacheDir == null) cacheDir = context.getCacheDir();
 
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
-            throw new Exception(context.getString(R.string.signature_cache_unable_to_create_cache_directory) + cacheDir.getAbsolutePath());
+            throw new Exception(context.getString(R.string.err_cache_mkdir) + cacheDir.getAbsolutePath());
         }
 
         File signCacheFile = new File(cacheDir, "custom_sign_file");
@@ -221,12 +221,12 @@ public class SignatureManager {
         try {
             is = context.getContentResolver().openInputStream(signUri);
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.signature_cache_unable_to_read_selected_signature_) + signUri.toString() + "\n"
-                    + context.getString(R.string.reason) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_cache_unreadable) + signUri.toString() + "\n"
+                    + context.getString(R.string.err_reason) + e.getMessage());
         }
 
         if (is == null) {
-            throw new Exception(context.getString(R.string.signature_cache_the_input_stream_is_empty_and_the_) + signUri.toString());
+            throw new Exception(context.getString(R.string.err_cache_empty_stream) + signUri.toString());
         }
 
         try {
@@ -236,13 +236,13 @@ public class SignatureManager {
             fos.close();
             is.close();
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.signature_cache_error_copying_signature_file_to_ca)
-                    + context.getString(R.string.target) + signCacheFile.getAbsolutePath() + "\n"
-                    + context.getString(R.string.reason) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_cache_copy)
+                    + context.getString(R.string.fmt_target_open) + signCacheFile.getAbsolutePath() + "\n"
+                    + context.getString(R.string.err_reason) + e.getMessage());
         }
 
         if (signCacheFile.length() == 0) {
-            throw new Exception(context.getString(R.string.signature_cache_the_file_size_after_caching_is_0_b));
+            throw new Exception(context.getString(R.string.err_cache_size_0));
         }
 
         return signCacheFile.getAbsolutePath();

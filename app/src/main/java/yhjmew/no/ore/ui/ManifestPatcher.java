@@ -27,20 +27,20 @@ public class ManifestPatcher {
      */
     public byte[] patchBinaryManifest(byte[] manifestData, String oldPkg, String newPkg) throws Exception {
         if (manifestData == null || manifestData.length < 8) {
-            throw new Exception(context.getString(R.string.manifest_androidmanifestxml_data_is_empty_or_too_s));
+            throw new Exception(context.getString(R.string.err_parse_manifest_empty));
         }
 
         if (newPkg.length() > oldPkg.length()) {
-            throw new Exception(context.getString(R.string.manifest_coexisting_package_name_length) + newPkg.length() + context.getString(R.string.exceeds_the_length_of_the_original_package_name)
-                    + oldPkg.length() + context.getString(R.string.inplace_modification_is_not_allowed_to_be_longer_n)
-                    + context.getString(R.string.old_package_name) + oldPkg + context.getString(R.string.nnew_package_name) + newPkg);
+            throw new Exception(context.getString(R.string.err_parse_manifest_clone_len) + newPkg.length() + context.getString(R.string.fmt_exceeds_orig_len)
+                    + oldPkg.length() + context.getString(R.string.fmt_inplace_too_long_nl)
+                    + context.getString(R.string.err_parse_old_pkg) + oldPkg + context.getString(R.string.err_parse_new_pkg) + newPkg);
         }
 
         byte[] result = manifestData.clone();
 
         if (Utils.readU16(result, 0) != RES_XML_TYPE) {
-            throw new Exception(context.getString(R.string.manifest_androidmanifestxml_is_not_valid_binary_ax)
-                    + Integer.toHexString(Utils.readU16(result, 0)) + context.getString(R.string.expected_0x0003));
+            throw new Exception(context.getString(R.string.err_parse_manifest_invalid)
+                    + Integer.toHexString(Utils.readU16(result, 0)) + context.getString(R.string.err_parse_expect_0x0003));
         }
 
         Map<String, String> replacements = new LinkedHashMap<String, String>();
@@ -72,13 +72,13 @@ public class ManifestPatcher {
         }
 
         if (replacedCount < 0) {
-            throw new Exception(context.getString(R.string.manifest_the_string_pool_stringpool_chunk_was_not_));
+            throw new Exception(context.getString(R.string.err_parse_manifest_nopool));
         }
 
         if (replacedCount == 0) {
-            throw new Exception(context.getString(R.string.manifest_no_package_name_string_that_needs_to_be_r)
-                    + context.getString(R.string.looking_for) + oldPkg + context.getString(R.string.and_its_derived_strings_n)
-                    + context.getString(R.string.possible_reasons_the_package_name_of_the_apk_is_in));
+            throw new Exception(context.getString(R.string.err_parse_manifest_nopkg)
+                    + context.getString(R.string.err_parse_looking_for) + oldPkg + context.getString(R.string.fmt_derived_strings)
+                    + context.getString(R.string.err_why_apk_pkg));
         }
 
         return result;
@@ -89,19 +89,19 @@ public class ManifestPatcher {
      */
     public byte[] patchResourcesArsc(byte[] arscData, String oldPkg, String newPkg) throws Exception {
         if (arscData == null || arscData.length < 8) {
-            throw new Exception(context.getString(R.string.arsc_the_resourcesarsc_data_is_empty_or_too_small_));
+            throw new Exception(context.getString(R.string.err_parse_arsc_empty));
         }
 
         if (newPkg.length() > oldPkg.length()) {
-            throw new Exception(context.getString(R.string.arsc_coexistence_package_name_length) + newPkg.length() + context.getString(R.string.exceeds_the_length_of_the_original_package_name)
-                    + oldPkg.length() + context.getString(R.string.inplace_modification_is_not_allowed_to_be_longer));
+            throw new Exception(context.getString(R.string.err_parse_arsc_clone_len) + newPkg.length() + context.getString(R.string.fmt_exceeds_orig_len)
+                    + oldPkg.length() + context.getString(R.string.fmt_inplace_too_long));
         }
 
         byte[] result = arscData.clone();
 
         if (Utils.readU16(result, 0) != RES_TABLE_TYPE) {
-            throw new Exception(context.getString(R.string.arsc_resourcesarsc_is_not_a_valid_resource_table_f)
-                    + Integer.toHexString(Utils.readU16(result, 0)) + context.getString(R.string.expected_0x0002));
+            throw new Exception(context.getString(R.string.err_parse_arsc_invalid)
+                    + Integer.toHexString(Utils.readU16(result, 0)) + context.getString(R.string.err_parse_expect_0002));
         }
 
         int tableSize = Utils.readU32(result, 4);
@@ -127,8 +127,8 @@ public class ManifestPatcher {
         }
 
         if (!found) {
-            throw new Exception(context.getString(R.string.arsc_package_name_not_found_in_resourcesarsc) + oldPkg + context.getString(R.string.package_chunkn)
-                    + context.getString(R.string.possible_reasons_the_package_name_in_arsc_is_incon));
+            throw new Exception(context.getString(R.string.err_parse_arsc_pkg_missing) + oldPkg + context.getString(R.string.fmt_package_chunk)
+                    + context.getString(R.string.err_why_arsc_pkg));
         }
 
         return result;
@@ -139,20 +139,20 @@ public class ManifestPatcher {
      */
     public byte[] patchPackageInfoXml(byte[] data, String oldPkg, String newPkg) throws Exception {
         if (data == null || data.length == 0) {
-            throw new Exception(context.getString(R.string.packageinfo_packageinfoxml_data_is_empty_and_canno));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_data_empty));
         }
 
         String text;
         try {
             text = new String(data, "UTF-8");
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.packageinfo_unable_to_decode_packageinfoxml_in_utf) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_decode) + e.getMessage());
         }
 
         if (!text.contains(oldPkg)) {
-            throw new Exception(context.getString(R.string.packageinfo_old_package_name_not_found_in_packagei) + oldPkg + "\n"
-                    + context.getString(R.string.file_content_length) + text.length() + context.getString(R.string.charactern)
-                    + context.getString(R.string.possible_reasons_the_file_has_been_modified_or_the));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_old_pkg) + oldPkg + "\n"
+                    + context.getString(R.string.err_parse_content_len) + text.length() + context.getString(R.string.fmt_characters_nl)
+                    + context.getString(R.string.err_why_file_modified));
         }
 
         text = text.replace(oldPkg, newPkg);
@@ -175,7 +175,7 @@ public class ManifestPatcher {
         boolean isUtf8 = (flags & UTF8_FLAG) != 0;
 
         if (stringCount <= 0) {
-            throw new Exception(context.getString(R.string.stringpool_the_number_of_strings_is_0_and_cannot_b));
+            throw new Exception(context.getString(R.string.err_parse_pool_zero));
         }
 
         int[] stringOffsets = new int[stringCount];
@@ -210,7 +210,7 @@ public class ManifestPatcher {
             } catch (Exception e) {
                 failCount++;
                 if (failDetail.length() < 200) {
-                    failDetail.append(context.getString(R.string.text_71) + i + context.getString(R.string.read_failed) + e.getMessage() + "; ");
+                    failDetail.append(context.getString(R.string.fmt_string_index) + i + context.getString(R.string.err_read_failed) + e.getMessage() + "; ");
                 }
                 continue;
             }
@@ -230,18 +230,18 @@ public class ManifestPatcher {
             }
 
             if (!success) {
-                throw new Exception(context.getString(R.string.stringpool_replacement_failed_insufficient_spacen)
-                        + context.getString(R.string.original_text) + currentValue + context.getString(R.string.length) + currentValue.length() + ")\n"
-                        + context.getString(R.string.target) + newValue + context.getString(R.string.length) + newValue.length() + ")\n"
-                        + context.getString(R.string.available_slots) + available + context.getString(R.string.bytesn)
-                        + context.getString(R.string.coding) + (isUtf8 ? "UTF-8" : "UTF-16"));
+                throw new Exception(context.getString(R.string.err_parse_pool_nospace)
+                        + context.getString(R.string.fmt_original_open) + currentValue + context.getString(R.string.fmt_length_open) + currentValue.length() + ")\n"
+                        + context.getString(R.string.fmt_target_open) + newValue + context.getString(R.string.fmt_length_open) + newValue.length() + ")\n"
+                        + context.getString(R.string.err_parse_slots) + available + context.getString(R.string.fmt_bytes_nl)
+                        + context.getString(R.string.err_parse_coding) + (isUtf8 ? "UTF-8" : "UTF-16"));
             }
 
             replaceCount++;
         }
 
         if (failCount > 0) {
-            throw new Exception(context.getString(R.string.stringpool_when_reading_a_string_there_is) + failCount + context.getString(R.string.failedn) + failDetail.toString());
+            throw new Exception(context.getString(R.string.err_parse_pool_read) + failCount + context.getString(R.string.err_failed_nl) + failDetail.toString());
         }
 
         return replaceCount;
@@ -361,7 +361,7 @@ public class ManifestPatcher {
                     (byte) (length & 0xFF)
             };
         }
-        throw new Exception(context.getString(R.string.utf8_string_length_is_too_large_to_encode));
+        throw new Exception(context.getString(R.string.err_parse_utf8_too_long));
     }
 
     private byte[] encodeLengthUtf16(int length) throws Exception {
@@ -371,7 +371,7 @@ public class ManifestPatcher {
                     (byte) ((length >> 8) & 0xFF)
             };
         }
-        throw new Exception(context.getString(R.string.utf16_string_length_is_too_large_to_encode));
+        throw new Exception(context.getString(R.string.err_parse_utf16_too_long));
     }
 
     private String readFixedUtf16String(byte[] data, int offset, int maxChars) throws Exception {
@@ -391,7 +391,7 @@ public class ManifestPatcher {
     private void writeFixedUtf16String(byte[] data, int offset, int maxChars, String value)
             throws Exception {
         if (value.length() > maxChars) {
-            throw new Exception(context.getString(R.string.fixed_utf16_field_running_out_of_space));
+            throw new Exception(context.getString(R.string.err_parse_utf16_nospace));
         }
 
         Arrays.fill(data, offset, offset + maxChars * 2, (byte) 0);

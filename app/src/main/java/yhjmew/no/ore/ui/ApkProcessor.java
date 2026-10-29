@@ -44,6 +44,10 @@ public class ApkProcessor {
     private static final int SO_TYPE_STANDALONE = 1;
     private static final String PREF_SO = "SoConfig";
 
+    /** 注入 dex 的独有类名前缀，用来识别「上次打包的产物」 */
+    private static final byte[] INJECTED_DEX_MARKER =
+            "Ldev/yejdhi/loader/".getBytes(java.nio.charset.Charset.forName("UTF-8"));
+
     private Context context;
     private SignatureManager signatureManager;
     private ManifestPatcher manifestPatcher;
@@ -95,11 +99,11 @@ public class ApkProcessor {
      */
     public String getSoDisplayName(int type) {
         if (type == SO_TYPE_WITH_PRELOADER) {
-            return context.getString(R.string.so_with_preloader);
+            return context.getString(R.string.msg_so_preloader);
         } else if (type == SO_TYPE_STANDALONE) {
-            return context.getString(R.string.so_standalone);
+            return context.getString(R.string.msg_so_standalone);
         }
-        return context.getString(R.string.unknown_so_type);
+        return context.getString(R.string.err_so_unknown);
     }
 
     /**
@@ -118,23 +122,23 @@ public class ApkProcessor {
 
         try {
             if (isCloneMode) {
-                progressCallback.onLog(context.getString(R.string.current_mode_coexistence_mode));
-                progressCallback.onLog(context.getString(R.string.current_package_name_1) + oldPkg);
-                progressCallback.onLog(context.getString(R.string.target_package_name) + targetPkg);
+                progressCallback.onLog(context.getString(R.string.log_mode_clone));
+                progressCallback.onLog(context.getString(R.string.log_current_pkg_plain) + oldPkg);
+                progressCallback.onLog(context.getString(R.string.log_target_pkg) + targetPkg);
             } else {
-                progressCallback.onLog(context.getString(R.string.current_mode_normal_mode));
-                progressCallback.onLog(context.getString(R.string.current_package_name) + oldPkg);
+                progressCallback.onLog(context.getString(R.string.log_mode_normal));
+                progressCallback.onLog(context.getString(R.string.log_current_pkg) + oldPkg);
             }
 
-            progressCallback.onLog(context.getString(R.string.use_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
+            progressCallback.onLog(context.getString(R.string.log_use_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
 
-            progressCallback.onLog(context.getString(R.string.copying_to_temporary_directory));
+            progressCallback.onLog(context.getString(R.string.log_copying_temp));
             copyUriToFile(uri, tempApk);
 
-            progressCallback.onLog(context.getString(R.string.start_unpacking_and_repacking_this_will_take_some_));
+            progressCallback.onLog(context.getString(R.string.log_start_repack));
             injectFileIntoApk(tempApk, moddedApk, oldPkg, targetPkg, isCloneMode);
 
-            progressCallback.onLog(context.getString(R.string.modification_completed_signing_in_progress));
+            progressCallback.onLog(context.getString(R.string.log_signing));
             progressCallback.setIndeterminate(true);
             signatureManager.signApk(moddedApk, signedApk);
 
@@ -150,11 +154,11 @@ public class ApkProcessor {
             if (finalOutputFile.getParentFile() == null
                     || !finalOutputFile.getParentFile().exists()
                     || !finalOutputFile.getParentFile().canWrite()) {
-                progressCallback.onLog(context.getString(R.string.warning_unable_to_write_to_original_directory_will));
+                progressCallback.onLog(context.getString(R.string.log_warn_fallback_dir));
                 finalOutputFile = new File(Environment.getExternalStorageDirectory() + "/Download", newFileName);
             }
 
-            progressCallback.onLog(context.getString(R.string.signature_completed_exporting_file));
+            progressCallback.onLog(context.getString(R.string.log_exporting));
             copyFile(signedApk, finalOutputFile);
 
             tempApk.delete();
@@ -165,13 +169,13 @@ public class ApkProcessor {
             progressCallback.setIndeterminate(false);
 
             if (isCloneMode) {
-                progressCallback.onLog(context.getString(R.string.coexistence_processing_completed));
-                progressCallback.onLog(context.getString(R.string.the_package_name_has_been_changed_from) + oldPkg + context.getString(R.string.automatically_modified_to) + targetPkg + "]");
+                progressCallback.onLog(context.getString(R.string.log_clone_done));
+                progressCallback.onLog(context.getString(R.string.log_pkg_changed_from) + oldPkg + context.getString(R.string.log_pkg_changed_to) + targetPkg + "]");
             } else {
-                progressCallback.onLog(context.getString(R.string.ordinary_processing_completed));
+                progressCallback.onLog(context.getString(R.string.log_normal_done));
             }
 
-            progressCallback.onLog(context.getString(R.string.the_final_file_has_been_saved_ton) + finalOutputFile.getAbsolutePath());
+            progressCallback.onLog(context.getString(R.string.log_saved_to) + finalOutputFile.getAbsolutePath());
 
         } finally {
             if (tempApk.exists()) tempApk.delete();
@@ -191,24 +195,42 @@ public class ApkProcessor {
         try {
             zipFile = new ZipFile(sourceFile);
 
+            // 先扫一遍：既要算新 dex 该叫什么名字，
+            // 也要找出「上一次打包留下的注入 dex」，那些必须丢掉重建，
+            // 否则重打包会出现两份同名类，游戏直接崩。
             Set<String> existingDexNames = new HashSet<String>();
+            Set<String> staleInjectedDexNames = new HashSet<String>();
+
             Enumeration<? extends ZipEntry> scanEntries = zipFile.entries();
             while (scanEntries.hasMoreElements()) {
-                String name = scanEntries.nextElement().getName();
-                if (name.startsWith("classes") && name.endsWith(".dex")) {
-                    existingDexNames.add(name);
+                ZipEntry e = scanEntries.nextElement();
+                String name = e.getName();
+                if (!name.startsWith("classes") || !name.endsWith(".dex")) {
+                    continue;
+                }
+                existingDexNames.add(name);
+                if (isInjectedDex(zipFile, e)) {
+                    staleInjectedDexNames.add(name);
                 }
             }
 
+            boolean isRepack = !staleInjectedDexNames.isEmpty();
+
             int injectDexIndex = 1;
             String injectDexName = "classes.dex";
-            while (existingDexNames.contains(injectDexName)) {
+            while (existingDexNames.contains(injectDexName)
+                    && !staleInjectedDexNames.contains(injectDexName)) {
                 injectDexIndex++;
                 injectDexName = "classes" + injectDexIndex + ".dex";
             }
+            // 若首选名字恰好是个旧注入 dex，直接复用那个名字覆盖掉
+            if (isRepack) {
+                progressCallback.onLog(context.getString(R.string.log_repack_detected)
+                        + staleInjectedDexNames.size() + context.getString(R.string.fmt_unit_pieces));
+            }
 
-            progressCallback.onLog(context.getString(R.string.the_original_package_already_has_a_dex_file) + existingDexNames.size() + context.getString(R.string.indivual));
-            progressCallback.onLog(context.getString(R.string.inject_dex_number_assignment));
+            progressCallback.onLog(context.getString(R.string.log_dex_existing) + existingDexNames.size() + context.getString(R.string.fmt_unit_pieces));
+            progressCallback.onLog(context.getString(R.string.log_dex_assign));
             progressCallback.onLog("  inject_classes.dex → " + injectDexName);
 
             Set<String> overridePaths = new HashSet<String>();
@@ -242,13 +264,18 @@ public class ApkProcessor {
                     continue;
                 }
 
+                // 上一次打包留下的注入 dex：整条丢弃，稍后写入全新的
+                if (staleInjectedDexNames.contains(entryName)) {
+                    continue;
+                }
+
                 InputStream is = zipFile.getInputStream(entry);
                 if (is == null) {
                     continue;
                 }
 
                 if (needClone && "AndroidManifest.xml".equals(entryName)) {
-                    progressCallback.onLog(context.getString(R.string.modifying_androidmanifestxml_package_name));
+                    progressCallback.onLog(context.getString(R.string.log_modifying_manifest));
                     byte[] originalBytes = Utils.readAllBytes(is);
                     is.close();
 
@@ -259,7 +286,7 @@ public class ApkProcessor {
                 }
 
                 if (needClone && "resources.arsc".equals(entryName)) {
-                    progressCallback.onLog(context.getString(R.string.modifying_resourcesarsc));
+                    progressCallback.onLog(context.getString(R.string.log_modifying_arsc));
                     byte[] originalBytes = Utils.readAllBytes(is);
                     is.close();
 
@@ -270,7 +297,7 @@ public class ApkProcessor {
                 }
 
                 if (needClone && entryName.endsWith("package-info.xml")) {
-                    progressCallback.onLog(context.getString(R.string.modifying) + entryName + "...");
+                    progressCallback.onLog(context.getString(R.string.log_modifying) + entryName + "...");
                     byte[] originalBytes = Utils.readAllBytes(is);
                     is.close();
 
@@ -296,7 +323,7 @@ public class ApkProcessor {
                     try {
                         injected = processAndCheckDex(tempDexIn, tempDexOut, entryName);
                     } catch (Exception e) {
-                        progressCallback.onLog(context.getString(R.string.dex_processing_failed) + entryName + "): " + Utils.getFullStackTrace(e));
+                        progressCallback.onLog(context.getString(R.string.log_dex_failed) + entryName + "): " + Utils.getFullStackTrace(e));
                     }
 
                     if (injected) {
@@ -330,30 +357,30 @@ public class ApkProcessor {
 
             if (needClone) {
                 if (!manifestPatched) {
-                    throw new Exception(context.getString(R.string.coexistence_androidmanifestxml_was_not_found_in_th)
-                            + context.getString(R.string.total_number_of_entries_in_apk) + totalEntries + "\n"
-                            + context.getString(R.string.possible_reasons_the_apk_structure_is_damaged_or_t));
+                    throw new Exception(context.getString(R.string.err_clone_no_manifest)
+                            + context.getString(R.string.err_parse_total_entries) + totalEntries + "\n"
+                            + context.getString(R.string.err_why_apk_structure));
                 }
                 if (!arscPatched) {
-                    throw new Exception(context.getString(R.string.coexistence_resourcesarsc_was_not_found_in_the_apk)
-                            + context.getString(R.string.total_number_of_entries_in_apk) + totalEntries + "\n"
-                            + context.getString(R.string.possible_reasons_the_apk_is_a_split_apk_no_indepen));
+                    throw new Exception(context.getString(R.string.err_clone_no_arsc)
+                            + context.getString(R.string.err_parse_total_entries) + totalEntries + "\n"
+                            + context.getString(R.string.err_why_split_apk));
                 }
                 if (!packageInfoFound) {
-                    progressCallback.onLog(context.getString(R.string.packageinfoxml_not_found_automatically_skipped));
+                    progressCallback.onLog(context.getString(R.string.log_pkginfo_skipped));
                 }
             }
 
-            progressCallback.onLog(context.getString(R.string.injecting_additional_core_components));
+            progressCallback.onLog(context.getString(R.string.log_injecting_components));
 
             String soAssetName;
             if (currentSoType == SO_TYPE_WITH_PRELOADER) {
                 injectAssetToZip(zos, "libpreloader.so", "lib/arm64-v8a/libpreloader.so");
                 soAssetName = "libForceCloseOreUI_with_preloader.so";
-                progressCallback.onLog(context.getString(R.string.inject_with_preloader_mode));
+                progressCallback.onLog(context.getString(R.string.log_inject_preloader));
             } else {
                 soAssetName = "libForceCloseOreUI_standalone.so";
-                progressCallback.onLog(context.getString(R.string.inject_standalone_mode));
+                progressCallback.onLog(context.getString(R.string.log_inject_standalone));
             }
 
             injectAssetToZip(zos, soAssetName, "lib/arm64-v8a/libForceCloseOreUI.so");
@@ -381,6 +408,74 @@ public class ApkProcessor {
     /**
      * 处理并检查 DEX 文件
      */
+    /**
+     * 判断某个 dex 是不是「本工具上次注入的那个」。
+     *
+     * <p>注入 dex 里有一批 {@code dev.yejdhi.loader.*} 类，这是外部加载器
+     * （inject_classes.dex）独有的命名空间，游戏本体不可能有。
+     * 直接把 dex 当字节流搜字符串，比加载解析快得多，也不会因为
+     * 版本差异解析失败。
+     */
+    /**
+     * 检查 onCreate 的指令里是否已经存在 {@code SoLoader.loadLibrary(Context)}。
+     *
+     * <p>只看引用名，不校验寄存器：我们插入的那条是方法开头第一条指令，
+     * 而游戏本体（第 0 版）没有这个类的调用，命中即视为已注入。
+     */
+    private boolean alreadyInjectedLoadLibrary(List<Instruction> instructions) {
+        for (Instruction instr : instructions) {
+            if (!(instr instanceof org.jf.dexlib2.iface.instruction.ReferenceInstruction)) {
+                continue;
+            }
+            org.jf.dexlib2.iface.reference.Reference ref =
+                    ((org.jf.dexlib2.iface.instruction.ReferenceInstruction) instr).getReference();
+            if (!(ref instanceof org.jf.dexlib2.iface.reference.MethodReference)) {
+                continue;
+            }
+            org.jf.dexlib2.iface.reference.MethodReference mr =
+                    (org.jf.dexlib2.iface.reference.MethodReference) ref;
+            if ("Lcom/mojang/minecraftpe/SoLoader;".equals(mr.getDefiningClass())
+                    && "loadLibrary".equals(mr.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isInjectedDex(ZipFile zipFile, ZipEntry entry) {
+        InputStream is = null;
+        try {
+            is = zipFile.getInputStream(entry);
+            if (is == null) {
+                return false;
+            }
+            byte[] marker = INJECTED_DEX_MARKER;
+            int matched = 0;
+            int b;
+            // 单趟流式匹配，避免把几十 MB 的 dex 整个读进内存
+            while ((b = is.read()) != -1) {
+                if ((byte) b == marker[matched]) {
+                    matched++;
+                    if (matched == marker.length) {
+                        return true;
+                    }
+                } else {
+                    matched = ((byte) b == marker[0]) ? 1 : 0;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (Exception ignore) {
+                }
+            }
+        }
+    }
+
     private boolean processAndCheckDex(File tempIn, File tempOut, String entryName) throws Exception {
         boolean isTargetDex = false;
         DexFile df = DexFileFactory.loadDexFile(tempIn, Opcodes.getDefault());
@@ -396,7 +491,7 @@ public class ApkProcessor {
             return false;
         }
 
-        progressCallback.onLog(context.getString(R.string.in) + entryName + context.getString(R.string.mainactivity_is_found_injecting_and_correcting_the));
+        progressCallback.onLog(context.getString(R.string.log_mc_in) + entryName + context.getString(R.string.log_mainactivity_found));
 
         DexRewriter rewriter = new DexRewriter(new RewriterModule() {
             @Override
@@ -412,6 +507,15 @@ public class ApkProcessor {
                                 List<Instruction> instructions = new ArrayList<Instruction>();
                                 for (Instruction instr : origImpl.getInstructions()) {
                                     instructions.add(instr);
+                                }
+
+                                // 幂等：上一次打包已经插过一次 loadLibrary 的话就别再插。
+                                // 重打包时 classes.dex 还是游戏原包，但 onCreate 可能
+                                // 已经被上一轮改写过了（用户拿打好的包再打一次）。
+                                if (alreadyInjectedLoadLibrary(instructions)) {
+                                    progressCallback.onLog(
+                                            context.getString(R.string.log_repack_skip_inject));
+                                    return method;
                                 }
 
                                 int regCount = origImpl.getRegisterCount();
@@ -529,10 +633,10 @@ public class ApkProcessor {
             }
 
             zos.closeEntry();
-            progressCallback.onLog(context.getString(R.string.successful_injection) + zipPath);
+            progressCallback.onLog(context.getString(R.string.log_inject_ok) + zipPath);
         } catch (Exception e) {
-            progressCallback.onLog(context.getString(R.string.injection_failed) + assetName);
-            progressCallback.onLog(context.getString(R.string.reason) + e.getClass().getSimpleName() + ": " + e.getMessage());
+            progressCallback.onLog(context.getString(R.string.err_injection_failed) + assetName);
+            progressCallback.onLog(context.getString(R.string.err_reason) + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
     }
 
@@ -598,20 +702,20 @@ public class ApkProcessor {
      */
     private void copyUriToFile(Uri uri, File dest) throws Exception {
         if (uri == null) {
-            throw new Exception(context.getString(R.string.io_uri_is_null_file_cannot_be_copied));
+            throw new Exception(context.getString(R.string.err_io_uri_null));
         }
 
         InputStream is = null;
         try {
             is = context.getContentResolver().openInputStream(uri);
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.io_unable_to_open_input_stream_for_selected_file) + uri.toString() + "\n"
-                    + context.getString(R.string.reason_1) + e.getMessage() + "\n"
-                    + context.getString(R.string.possible_reasons_the_file_has_been_deleted_moved_o));
+            throw new Exception(context.getString(R.string.err_io_open_stream) + uri.toString() + "\n"
+                    + context.getString(R.string.err_reason_alt) + e.getMessage() + "\n"
+                    + context.getString(R.string.err_why_file_gone));
         }
 
         if (is == null) {
-            throw new Exception(context.getString(R.string.io_getcontentresolver_returns_an_empty_stream_and_) + uri.toString());
+            throw new Exception(context.getString(R.string.err_io_empty_stream) + uri.toString());
         }
 
         try {
@@ -621,10 +725,10 @@ public class ApkProcessor {
             fos.close();
             is.close();
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.io_error_copying_file_streamn)
-                    + context.getString(R.string.source) + uri.toString() + "\n"
-                    + context.getString(R.string.target_1) + dest.getAbsolutePath() + "\n"
-                    + context.getString(R.string.reason) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_io_copy)
+                    + context.getString(R.string.log_source) + uri.toString() + "\n"
+                    + context.getString(R.string.fmt_target) + dest.getAbsolutePath() + "\n"
+                    + context.getString(R.string.err_reason) + e.getMessage());
         }
     }
 

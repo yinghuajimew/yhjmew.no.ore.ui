@@ -87,10 +87,10 @@ public class UpdateManager {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     NOTIFICATION_CHANNEL_ID,
-                    context.getString(R.string.app_update_download),
+                    context.getString(R.string.title_app_update_download),
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription(context.getString(R.string.show_app_update_download_progress));
+            channel.setDescription(context.getString(R.string.msg_update_notification));
             notificationManager.createNotificationChannel(channel);
         }
     }
@@ -108,29 +108,29 @@ public void checkUpdate(final UpdateCallback callback, final boolean isManual) {
         public void run() {
             String currentVersion = getCurrentVersion();
             
-            notifyLog(context.getString(R.string.shared) + UPDATE_CHECK_URLS.length + context.getString(R.string.update_sources));
+            notifyLog(context.getString(R.string.log_total_sources) + UPDATE_CHECK_URLS.length + context.getString(R.string.fmt_update_sources));
             
             for (int i = 0; i < UPDATE_CHECK_URLS.length; i++) {
                 String checkUrl = UPDATE_CHECK_URLS[i];
                 try {
-                    notifyLog(context.getString(R.string.try_the_source) + (i + 1) + "/" + UPDATE_CHECK_URLS.length + ": " + getDomainName(checkUrl));
+                    notifyLog(context.getString(R.string.log_try_source) + (i + 1) + "/" + UPDATE_CHECK_URLS.length + ": " + getDomainName(checkUrl));
                     
                     String json = fetchUrl(checkUrl, 10000);
                     if (json != null && json.length() > 0) {
-                        notifyLog(context.getString(R.string.from) + getDomainName(checkUrl) + context.getString(R.string.obtain_updated_information_successfully));
+                        notifyLog(context.getString(R.string.log_from) + getDomainName(checkUrl) + context.getString(R.string.log_got_update_info));
                         parseUpdateResponse(json, currentVersion, isManual);
                         return;
                     }
                 } catch (Exception e) {
-                    notifyLog(context.getString(R.string.source) + (i + 1) + context.getString(R.string.fail) + e.getMessage());
+                    notifyLog(context.getString(R.string.log_source) + (i + 1) + context.getString(R.string.err_fail) + e.getMessage());
                     
                     if (i < UPDATE_CHECK_URLS.length - 1) {
-                        notifyLog(context.getString(R.string.switch_to_next_source));
+                        notifyLog(context.getString(R.string.log_next_source));
                     }
                 }
             }
             
-            notifyError(context.getString(R.string.all_update_sources_are_inaccessible_total) + UPDATE_CHECK_URLS.length + context.getString(R.string.sources));
+            notifyError(context.getString(R.string.err_no_update_source) + UPDATE_CHECK_URLS.length + context.getString(R.string.err_parse_sources));
         }
     }).start();
 }
@@ -151,7 +151,7 @@ private String getDomainName(String url) {
      * 获取 URL 内容（类的成员方法）
      */
 private String fetchUrl(String urlString, int timeout) throws Exception {
-    notifyLog(context.getString(R.string.requesting) + getDomainName(urlString));
+    notifyLog(context.getString(R.string.log_requesting) + getDomainName(urlString));
     
     java.net.URL url = new java.net.URL(urlString);
     java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
@@ -177,29 +177,29 @@ private String fetchUrl(String urlString, int timeout) throws Exception {
     }
 
     int responseCode = conn.getResponseCode();
-    notifyLog(context.getString(R.string.response_code) + responseCode);
+    notifyLog(context.getString(R.string.log_response_code) + responseCode);
     
     // 处理重定向（虽然已设置自动跟随，但有些服务器需要手动处理）
     if (responseCode >= 300 && responseCode < 400) {
         String newUrl = conn.getHeaderField("Location");
         conn.disconnect();
-        notifyLog(context.getString(R.string.redirect_to) + newUrl);
+        notifyLog(context.getString(R.string.log_redirect) + newUrl);
         return fetchUrl(newUrl, timeout);
     }
     
     if (responseCode == 200) {
         // 检查 Content-Type
         String contentType = conn.getContentType();
-        notifyLog(context.getString(R.string.contenttype) + (contentType != null ? contentType : "null"));
+        notifyLog(context.getString(R.string.log_content_type) + (contentType != null ? contentType : "null"));
         
         // 检查 Content-Length
         int contentLength = conn.getContentLength();
-        notifyLog(context.getString(R.string.contentlength) + contentLength);
+        notifyLog(context.getString(R.string.log_content_length) + contentLength);
         
         // 如果返回的是 HTML，说明有问题
         if (contentType != null && contentType.toLowerCase().contains("text/html")) {
             conn.disconnect();
-            throw new Exception(context.getString(R.string.server_returns_html_instead_of_json_contenttype) + contentType + ")");
+            throw new Exception(context.getString(R.string.err_server_html) + contentType + ")");
         }
         
         java.io.InputStream is = conn.getInputStream();
@@ -220,11 +220,11 @@ private String fetchUrl(String urlString, int timeout) throws Exception {
         conn.disconnect();
         
         byte[] responseBytes = baos.toByteArray();
-        notifyLog(context.getString(R.string.actual_reading) + responseBytes.length + context.getString(R.string.byte_1));
+        notifyLog(context.getString(R.string.log_actual_read) + responseBytes.length + context.getString(R.string.fmt_bytes));
         
         // 检查是否为空
         if (responseBytes.length == 0) {
-            throw new Exception(context.getString(R.string.server_returns_empty_content));
+            throw new Exception(context.getString(R.string.err_server_empty));
         }
         
         // 尝试 UTF-8 解码
@@ -232,11 +232,11 @@ private String fetchUrl(String urlString, int timeout) throws Exception {
         try {
             response = new String(responseBytes, "UTF-8");
         } catch (Exception e) {
-            notifyLog(context.getString(R.string.utf8_decoding_failed_try_gbk));
+            notifyLog(context.getString(R.string.log_utf8_fallback));
             try {
                 response = new String(responseBytes, "GBK");
             } catch (Exception e2) {
-                throw new Exception(context.getString(R.string.unable_to_decode_response_content_tried_utf8_and_g));
+                throw new Exception(context.getString(R.string.err_decode_failed));
             }
         }
         
@@ -246,23 +246,23 @@ private String fetchUrl(String urlString, int timeout) throws Exception {
             response = response.substring(1);
         }
         
-        notifyLog(context.getString(R.string.response_preview_first_100_characters) + response.substring(0, Math.min(100, response.length())));
+        notifyLog(context.getString(R.string.log_response_preview) + response.substring(0, Math.min(100, response.length())));
         
         // 验证是否为 JSON
         if (!response.startsWith("{") && !response.startsWith("[")) {
-            throw new Exception(context.getString(R.string.the_returned_content_is_not_in_json_format_startin) + response.substring(0, Math.min(50, response.length())));
+            throw new Exception(context.getString(R.string.err_not_json) + response.substring(0, Math.min(50, response.length())));
         }
         
         return response;
     } else if (responseCode == 404) {
         conn.disconnect();
-        throw new Exception(context.getString(R.string.file_does_not_exist_404));
+        throw new Exception(context.getString(R.string.err_404));
     } else if (responseCode == 403) {
         conn.disconnect();
-        throw new Exception(context.getString(R.string.access_denied_403));
+        throw new Exception(context.getString(R.string.err_403));
     } else {
         conn.disconnect();
-        throw new Exception(context.getString(R.string.http) + responseCode);
+        throw new Exception(context.getString(R.string.err_parse_http) + responseCode);
     }
 }
 
@@ -295,7 +295,7 @@ public void checkUpdate(final UpdateCallback callback) {
 
                     if (!response.isSuccessful()) {
                         response.close();
-                        notifyDownloadError(context.getString(R.string.the_download_failed_and_the_server_returned) + response.code());
+                        notifyDownloadError(context.getString(R.string.err_download_server) + response.code());
                         return;
                     }
 
@@ -332,7 +332,7 @@ public void checkUpdate(final UpdateCallback callback) {
 
                 } catch (Exception e) {
                     cancelNotification();
-                    notifyDownloadError(context.getString(R.string.download_failed) + e.getMessage());
+                    notifyDownloadError(context.getString(R.string.err_download_failed) + e.getMessage());
                 }
             }
         }).start();
@@ -356,12 +356,12 @@ public void checkUpdate(final UpdateCallback callback) {
             String lang = java.util.Locale.getDefault().getLanguage();
             boolean preferZh = "zh".equals(lang);
             if (preferZh) {
-                changelog = changelogObj.optString("zh", changelogObj.optString("en", context.getString(R.string.no_update_instructions_yet)));
+                changelog = changelogObj.optString("zh", changelogObj.optString("en", context.getString(R.string.msg_no_update_note)));
             } else {
-                changelog = changelogObj.optString("en", changelogObj.optString("zh", context.getString(R.string.no_changelog_available)));
+                changelog = changelogObj.optString("en", changelogObj.optString("zh", context.getString(R.string.msg_no_changelog)));
             }
         } else {
-            changelog = root.optString("changelog", context.getString(R.string.no_update_instructions_yet));
+            changelog = root.optString("changelog", context.getString(R.string.msg_no_update_note));
         }
         
         // 解析下载源
@@ -378,36 +378,36 @@ public void checkUpdate(final UpdateCallback callback) {
 		}
 
         // 添加详细日志
-        notifyLog(context.getString(R.string.version_Information));
-        notifyLog(context.getString(R.string.current_version) + currentVersion);
-        notifyLog(context.getString(R.string.latest_version) + latestVersion);
-        notifyLog(context.getString(R.string.minimum_version) + minVersion);
-        notifyLog(context.getString(R.string.force_update) + forceUpdate);
+        notifyLog(context.getString(R.string.title_version_info));
+        notifyLog(context.getString(R.string.fmt_current_version) + currentVersion);
+        notifyLog(context.getString(R.string.fmt_latest_version) + latestVersion);
+        notifyLog(context.getString(R.string.fmt_min_version) + minVersion);
+        notifyLog(context.getString(R.string.log_force_update_flag) + forceUpdate);
         
         // 判断逻辑
         boolean isLowerThanMin = isVersionLowerThan(currentVersion, minVersion);
-        notifyLog(context.getString(R.string.lower_than_the_minimum_version) + isLowerThanMin);
+        notifyLog(context.getString(R.string.log_below_min_version) + isLowerThanMin);
         
         // 检查是否需要强制更新
         if (forceUpdate || isLowerThanMin) {
-            notifyLog(context.getString(R.string.trigger_a_forced_update));
+            notifyLog(context.getString(R.string.log_force_update));
             notifyForceUpdate(latestVersion, currentVersion, minVersion, sources, changelog);
             return;
         }
 
         // 检查是否有新版本
         boolean hasNewVersion = isNewerVersion(currentVersion, latestVersion);
-        notifyLog(context.getString(R.string.there_is_a_new_version) + hasNewVersion);
+        notifyLog(context.getString(R.string.title_there_is_new_version) + hasNewVersion);
         
         if (hasNewVersion) {
             notifyUpdateAvailable(latestVersion, sources, changelog, forceUpdate, isManual);
         } else {
-            notifyLog(context.getString(R.string.it_is_currently_the_latest_version));
+            notifyLog(context.getString(R.string.log_is_latest));
             notifyNoUpdate();
         }
 
     } catch (Exception e) {
-        notifyError(context.getString(R.string.failed_to_parse_update_information) + e.getMessage());
+        notifyError(context.getString(R.string.err_parse_update_failed) + e.getMessage());
     }
 }
 
@@ -448,19 +448,19 @@ private boolean isVersionLowerThan(String current, String min) {
 
     public void installApk(File apkFile) {
     try {
-        notifyLog(context.getString(R.string.start_installation));
+        notifyLog(context.getString(R.string.log_start_install));
         
         if (!apkFile.exists()) {
-            notifyDownloadError(context.getString(R.string.apk_file_does_not_exist));
+            notifyDownloadError(context.getString(R.string.err_apk_missing));
             return;
         }
 
-        notifyLog(context.getString(R.string.file) + apkFile.getName() + " (" + (apkFile.length() / 1024 / 1024) + " MB)");
+        notifyLog(context.getString(R.string.fmt_file) + apkFile.getName() + " (" + (apkFile.length() / 1024 / 1024) + " MB)");
 
         // Android 8.0+ 检查安装权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (!context.getPackageManager().canRequestPackageInstalls()) {
-                notifyLog(context.getString(R.string.requires_installation_permission_jumping_to_settin));
+                notifyLog(context.getString(R.string.err_need_install_perm_jump));
                 Intent permIntent = new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                 permIntent.setData(android.net.Uri.parse("package:" + context.getPackageName()));
                 permIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -487,19 +487,19 @@ private boolean isVersionLowerThan(String current, String min) {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
         context.startActivity(intent);
-        notifyLog(context.getString(R.string.the_installation_interface_has_been_launched));
+        notifyLog(context.getString(R.string.log_install_ui_shown));
 
     } catch (Exception e) {
-        notifyDownloadError(context.getString(R.string.installation_failed) + e.getMessage());
-        notifyLog(context.getString(R.string.details) + android.util.Log.getStackTraceString(e));
+        notifyDownloadError(context.getString(R.string.err_install_failed) + e.getMessage());
+        notifyLog(context.getString(R.string.err_details) + android.util.Log.getStackTraceString(e));
     }
 }
 
     private void showDownloadNotification(int progress, int max) {
         notificationBuilder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle(context.getString(R.string.downloading_updates))
-                .setContentText(context.getString(R.string.ready_to_download))
+                .setContentTitle(context.getString(R.string.log_downloading_update))
+                .setContentText(context.getString(R.string.log_ready_download))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setOngoing(true);
 
@@ -517,7 +517,7 @@ private boolean isVersionLowerThan(String current, String min) {
             int percent = (int) ((progress * 100.0f) / max);
             notificationBuilder
                     .setProgress(max, progress, false)
-                    .setContentText(context.getString(R.string.downloaded) + percent + "%");
+                    .setContentText(context.getString(R.string.log_downloaded) + percent + "%");
             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
         }
     }
@@ -652,13 +652,13 @@ private void notifyForceUpdate(final String newVersion, final String currentVers
         new Thread(new Runnable() {
             @Override
             public void run() {
-                notifyLog(context.getString(R.string.testing_speed_looking_for_the_fastest_download_sou));
+                notifyLog(context.getString(R.string.log_testing_speed));
                 
                 // 第一步：测速，找到可用且最快的源
                 List<SourceWithSpeed> availableSources = testSourcesSpeed(sources);
                 
                 if (availableSources.isEmpty()) {
-                    notifyDownloadError(context.getString(R.string.all_download_sources_are_unavailable_please_check_));
+                    notifyDownloadError(context.getString(R.string.err_no_download_source));
                     return;
                 }
                 
@@ -668,22 +668,22 @@ private void notifyForceUpdate(final String newVersion, final String currentVers
                     DownloadSource source = sourceWithSpeed.source;
                     
                     try {
-                        notifyLog(context.getString(R.string.receiving_from) + source.name + context.getString(R.string.download_response_time) + sourceWithSpeed.responseTime + "ms)");
+                        notifyLog(context.getString(R.string.log_receiving_from) + source.name + context.getString(R.string.log_download_elapsed) + sourceWithSpeed.responseTime + "ms)");
                         
                         boolean success = downloadApkInternal(source.url, fileName);
                         
                         if (success) {
-                            notifyLog(context.getString(R.string.from) + source.name + context.getString(R.string.download_successful));
+                            notifyLog(context.getString(R.string.log_from) + source.name + context.getString(R.string.log_download_ok));
                             return;
                         }
                     } catch (Exception e) {
-                        notifyLog("❌ " + source.name + context.getString(R.string.download_failed) + e.getMessage());
+                        notifyLog("❌ " + source.name + context.getString(R.string.err_download_failed) + e.getMessage());
                         
                         // 如果还有其他源，继续尝试
                         if (i < availableSources.size() - 1) {
-                            notifyLog(context.getString(R.string.switching_to_alternate_download_source));
+                            notifyLog(context.getString(R.string.log_switching_source));
                         } else {
-                            notifyDownloadError(context.getString(R.string.all_attempts_to_download_sources_failed_please_try));
+                            notifyDownloadError(context.getString(R.string.err_download_all_failed));
                         }
                     }
                 }
@@ -718,13 +718,13 @@ private List<SourceWithSpeed> testSourcesSpeed(List<DownloadSource> sources) {
             
             if (responseCode == 200 || responseCode == 302 || responseCode == 301) {
                 results.add(new SourceWithSpeed(source, elapsedTime));
-                notifyLog("✅ " + source.name + context.getString(R.string.available_response) + elapsedTime + "ms)");
+                notifyLog("✅ " + source.name + context.getString(R.string.log_source_available) + elapsedTime + "ms)");
             } else {
-                notifyLog("⚠️ " + source.name + context.getString(R.string.return_error) + responseCode);
+                notifyLog("⚠️ " + source.name + context.getString(R.string.err_server_response) + responseCode);
             }
             
         } catch (Exception e) {
-            notifyLog("❌ " + source.name + context.getString(R.string.connection_failed) + e.getMessage());
+            notifyLog("❌ " + source.name + context.getString(R.string.err_connection) + e.getMessage());
         }
     }
     
@@ -779,13 +779,13 @@ private boolean downloadApkInternal(String downloadUrl, String fileName) throws 
         responseCode == 307 || responseCode == 308) {
         String newUrl = conn.getHeaderField("Location");
         conn.disconnect();
-        notifyLog(context.getString(R.string.redirect_to) + newUrl);
+        notifyLog(context.getString(R.string.log_redirect) + newUrl);
         return downloadApkInternal(newUrl, fileName);
     }
     
     if (responseCode != 200 && responseCode != 206) {  // 206 是部分内容（Range 请求）
         conn.disconnect();
-        throw new Exception(context.getString(R.string.server_returned_error) + responseCode);
+        throw new Exception(context.getString(R.string.err_server) + responseCode);
     }
 
     int fileLength = conn.getContentLength();
@@ -826,12 +826,12 @@ private boolean downloadApkInternal(String downloadUrl, String fileName) throws 
     // 验证文件完整性
     if (apkFile.length() == 0) {
         apkFile.delete();
-        throw new Exception(context.getString(R.string.downloaded_file_size_is_0));
+        throw new Exception(context.getString(R.string.err_download_size_0));
     }
     
     if (fileLength > 0 && apkFile.length() < fileLength * 0.9) {
         apkFile.delete();
-        throw new Exception(context.getString(R.string.incomplete_download_expected) + fileLength + context.getString(R.string.bytes_actual) + apkFile.length() + context.getString(R.string.byte_1));
+        throw new Exception(context.getString(R.string.err_download_incomplete) + fileLength + context.getString(R.string.fmt_bytes_actual) + apkFile.length() + context.getString(R.string.fmt_bytes));
     }
 
     cancelNotification();

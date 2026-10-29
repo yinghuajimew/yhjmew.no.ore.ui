@@ -58,7 +58,7 @@ public class PackageDetector {
      */
     public String detectPackageNameFromApkFile(File apkFile) throws Exception {
         if (!apkFile.exists()) {
-            throw new Exception(context.getString(R.string.detection_apk_temporary_file_does_not_exist) + apkFile.getAbsolutePath());
+            throw new Exception(context.getString(R.string.err_detect_tmp_missing) + apkFile.getAbsolutePath());
         }
 
         // 方法 1：使用 PackageManager
@@ -112,7 +112,7 @@ public class PackageDetector {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException(context.getString(R.string.detection_unable_to_open_apk_as_zip), e);
+            throw new RuntimeException(context.getString(R.string.err_detect_zip), e);
         } finally {
             if (zipFile != null) {
                 try {
@@ -122,7 +122,7 @@ public class PackageDetector {
             }
         }
 
-        throw new Exception(context.getString(R.string.detection_the_package_name_cannot_be_read_in_all_w));
+        throw new Exception(context.getString(R.string.err_detect_pkg_all));
     }
 
     /**
@@ -130,25 +130,25 @@ public class PackageDetector {
      */
     private String extractPackageNameFromPackageInfoXml(byte[] data) throws Exception {
         if (data == null || data.length == 0) {
-            throw new Exception(context.getString(R.string.packageinfo_parsing_the_data_is_empty));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_empty));
         }
 
         String text;
         try {
             text = new String(data, "UTF-8");
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.packageinfo_parsing_utf8_decoding_failed) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_utf8) + e.getMessage());
         }
 
         int tagIndex = text.indexOf("<package");
         if (tagIndex == -1) {
-            throw new Exception(context.getString(R.string.packageinfo_parsing_package_tag_not_found_nthe_fir)
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_tag)
                     + text.substring(0, Math.min(text.length(), 100)));
         }
 
         int nameIndex = text.indexOf("name=", tagIndex);
         if (nameIndex == -1) {
-            throw new Exception(context.getString(R.string.packageinfo_parsing_the_name_attribute_was_not_fou));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_name));
         }
 
         int quoteIndex = nameIndex + 5;
@@ -156,22 +156,22 @@ public class PackageDetector {
             quoteIndex++;
         }
         if (quoteIndex >= text.length()) {
-            throw new Exception(context.getString(R.string.packageinfo_analysis_there_is_no_quotation_mark_af));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_noquote));
         }
 
         char quote = text.charAt(quoteIndex);
         if (quote != '"' && quote != '\'') {
-            throw new Exception(context.getString(R.string.packageinfo_parsing_quotation_marks_are_expected_a) + quote + "'");
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_expect_quote) + quote + "'");
         }
 
         int end = text.indexOf(quote, quoteIndex + 1);
         if (end == -1) {
-            throw new Exception(context.getString(R.string.packageinfo_analysis_the_attribute_value_quotation));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_unclosed));
         }
 
         String result = text.substring(quoteIndex + 1, end).trim();
         if (result.length() == 0) {
-            throw new Exception(context.getString(R.string.packageinfo_analysis_the_extracted_package_name_is));
+            throw new Exception(context.getString(R.string.err_parse_pkginfo_pkg_empty));
         }
 
         return result;
@@ -182,16 +182,16 @@ public class PackageDetector {
      */
     private String extractPackageNameFromBinaryManifest(byte[] manifestData) throws Exception {
         if (manifestData == null) {
-            throw new Exception(context.getString(R.string.manifest_parsing_the_data_is_null));
+            throw new Exception(context.getString(R.string.err_parse_manifest_null));
         }
 
         if (manifestData.length < 8) {
-            throw new Exception(context.getString(R.string.manifest_analysis_data_is_too_small) + manifestData.length + context.getString(R.string.bytes_cannot_be_valid_axml));
+            throw new Exception(context.getString(R.string.err_parse_manifest_small) + manifestData.length + context.getString(R.string.err_parse_not_axml));
         }
 
         if (Utils.readU16(manifestData, 0) != RES_XML_TYPE) {
-            throw new Exception(context.getString(R.string.manifest_analysis_header_type_code_does_not_match_)
-                    + Integer.toHexString(Utils.readU16(manifestData, 0)) + context.getString(R.string.expecting_0x0003));
+            throw new Exception(context.getString(R.string.err_parse_manifest_type)
+                    + Integer.toHexString(Utils.readU16(manifestData, 0)) + context.getString(R.string.err_parse_expect_0003));
         }
 
         List<String> stringPool = null;
@@ -207,31 +207,31 @@ public class PackageDetector {
             chunkCount++;
 
             if (chunkSize <= 0) {
-                throw new Exception(context.getString(R.string.manifest_analysis_no) + chunkCount + context.getString(R.string.abnormal_chunk_size) + chunkSize
-                        + context.getString(R.string.offset_0x) + Integer.toHexString(offset) + ")");
+                throw new Exception(context.getString(R.string.err_parse_manifest_no) + chunkCount + context.getString(R.string.err_parse_chunk_size) + chunkSize
+                        + context.getString(R.string.fmt_offset_hex) + Integer.toHexString(offset) + ")");
             }
 
             if (chunkType == RES_STRING_POOL_TYPE && stringPool == null) {
                 try {
                     stringPool = readStringPoolStrings(manifestData, offset);
                 } catch (Exception e) {
-                    throw new Exception(context.getString(R.string.manifest_parsing_failed_to_read_string_pool_offset)
+                    throw new Exception(context.getString(R.string.err_parse_manifest_pool)
                             + Integer.toHexString(offset) + "): " + e.getMessage());
                 }
             } else if (chunkType == RES_XML_START_ELEMENT_TYPE) {
                 if (stringPool == null) {
-                    throw new Exception(context.getString(R.string.manifest_analysis_start_element_was_encountered_bu));
+                    throw new Exception(context.getString(R.string.err_parse_manifest_start));
                 }
 
                 if (offset + 28 > manifestData.length) {
-                    throw new Exception(context.getString(R.string.manifest_analysis_start_element_chunk_insufficient)
+                    throw new Exception(context.getString(R.string.err_parse_manifest_start_small)
                             + Integer.toHexString(offset));
                 }
 
                 int nameIndex = Utils.readU32(manifestData, offset + 20);
                 String tagName = Utils.getStringSafe(stringPool, nameIndex);
                 if (tagName == null) {
-                    throw new Exception(context.getString(R.string.manifest_analysis_tag_name_index) + nameIndex + context.getString(R.string.string_pool_range_exceeded_size)
+                    throw new Exception(context.getString(R.string.err_parse_manifest_tag) + nameIndex + context.getString(R.string.err_parse_pool_range)
                             + stringPool.size() + ")");
                 }
 
@@ -241,7 +241,7 @@ public class PackageDetector {
                     int attributeCount = Utils.readU16(manifestData, offset + 28);
 
                     if (attributeCount == 0) {
-                        throw new Exception(context.getString(R.string.manifest_analysis_the_number_of_manifest_tag_attri));
+                        throw new Exception(context.getString(R.string.err_parse_manifest_attrs));
                     }
 
                     int attrBase = offset + attributeStart;
@@ -250,7 +250,7 @@ public class PackageDetector {
                         int attrOffset = attrBase + i * attributeSize;
 
                         if (attrOffset + 20 > manifestData.length) {
-                            throw new Exception(context.getString(R.string.manifest_analysis_attributes) + i + context.getString(R.string.data_out_of_bounds));
+                            throw new Exception(context.getString(R.string.err_parse_manifest_attr) + i + context.getString(R.string.err_parse_out_of_bounds));
                         }
 
                         int attrNameIndex = Utils.readU32(manifestData, attrOffset + 4);
@@ -276,24 +276,24 @@ public class PackageDetector {
                                     return pkg;
                                 }
                             }
-                            throw new Exception(context.getString(R.string.manifest_parsing_the_package_attribute_was_found_b)
-                                    + context.getString(R.string.rawvalueindex) + rawValueIndex + "\n"
-                                    + context.getString(R.string.typedvaluetype_0x) + Integer.toHexString(typedValueType) + "\n"
-                                    + context.getString(R.string.typedvaluedata) + typedValueData);
+                            throw new Exception(context.getString(R.string.err_parse_manifest_pkg_read)
+                                    + context.getString(R.string.err_parse_raw_value_index) + rawValueIndex + "\n"
+                                    + context.getString(R.string.err_parse_typed_type) + Integer.toHexString(typedValueType) + "\n"
+                                    + context.getString(R.string.err_parse_typed_value) + typedValueData);
                         }
                     }
 
-                    throw new Exception(context.getString(R.string.manifest_parsing_package_attribute_not_found_in_ma)
-                            + context.getString(R.string.total_number_of_properties) + attributeCount);
+                    throw new Exception(context.getString(R.string.err_parse_manifest_pkg_missing)
+                            + context.getString(R.string.err_parse_total_props) + attributeCount);
                 }
             }
 
             offset += chunkSize;
         }
 
-        throw new Exception(context.getString(R.string.manifest_parsing_manifest_tag_not_found_n)
-                + context.getString(R.string.file_size) + manifestData.length + context.getString(R.string.bytesn)
-                + context.getString(R.string.traverse_the_number_of_chunks) + chunkCount);
+        throw new Exception(context.getString(R.string.err_parse_manifest_tag_missing)
+                + context.getString(R.string.err_parse_file_size) + manifestData.length + context.getString(R.string.fmt_bytes_nl)
+                + context.getString(R.string.err_parse_chunk_count) + chunkCount);
     }
 
     /**
@@ -371,20 +371,20 @@ public class PackageDetector {
 
     private void copyUriToFile(Uri uri, File dest) throws Exception {
         if (uri == null) {
-            throw new Exception(context.getString(R.string.io_uri_is_null_file_cannot_be_copied));
+            throw new Exception(context.getString(R.string.err_io_uri_null));
         }
 
         InputStream is = null;
         try {
             is = context.getContentResolver().openInputStream(uri);
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.io_unable_to_open_input_stream_for_selected_file) + uri.toString() + "\n"
-                    + context.getString(R.string.reason_1) + e.getMessage() + "\n"
-                    + context.getString(R.string.possible_reasons_the_file_has_been_deleted_moved_o));
+            throw new Exception(context.getString(R.string.err_io_open_stream) + uri.toString() + "\n"
+                    + context.getString(R.string.err_reason_alt) + e.getMessage() + "\n"
+                    + context.getString(R.string.err_why_file_gone));
         }
 
         if (is == null) {
-            throw new Exception(context.getString(R.string.io_getcontentresolver_returns_an_empty_stream_and_) + uri.toString());
+            throw new Exception(context.getString(R.string.err_io_empty_stream) + uri.toString());
         }
 
         try {
@@ -394,10 +394,10 @@ public class PackageDetector {
             fos.close();
             is.close();
         } catch (Exception e) {
-            throw new Exception(context.getString(R.string.io_error_copying_file_streamn)
-                    + context.getString(R.string.source) + uri.toString() + "\n"
-                    + context.getString(R.string.target_1) + dest.getAbsolutePath() + "\n"
-                    + context.getString(R.string.reason) + e.getMessage());
+            throw new Exception(context.getString(R.string.err_io_copy)
+                    + context.getString(R.string.log_source) + uri.toString() + "\n"
+                    + context.getString(R.string.fmt_target) + dest.getAbsolutePath() + "\n"
+                    + context.getString(R.string.err_reason) + e.getMessage());
         }
     }
 }

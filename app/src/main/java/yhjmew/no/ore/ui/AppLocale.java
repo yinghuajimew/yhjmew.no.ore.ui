@@ -135,12 +135,12 @@ final class AppLocale {
     /** 当前模式对应的显示名资源 id。 */
     static int modeLabelRes(int mode) {
         switch (mode) {
-            case MODE_ZH_CN: return R.string.language_zh_cn;
-            case MODE_ZH_TW: return R.string.language_zh_tw;
-            case MODE_ZH_HK: return R.string.language_zh_hk;
-            case MODE_EN:    return R.string.language_en;
+            case MODE_ZH_CN: return R.string.btn_language_zh_cn;
+            case MODE_ZH_TW: return R.string.btn_language_zh_tw;
+            case MODE_ZH_HK: return R.string.btn_language_zh_hk;
+            case MODE_EN:    return R.string.btn_language_en;
             case MODE_SYSTEM:
-            default:         return R.string.language_follow_system;
+            default:         return R.string.btn_language_follow_system;
         }
     }
 }
