@@ -20,6 +20,8 @@
     <string name="msg_search_hint">输入版本号搜索（1.21 及以上）</string>
     <string name="msg_latest_version_title">最新正式版</string>
     <string name="msg_search_result">搜索结果</string>
+    <string name="msg_official_versions">%1$s 正式版</string>
+    <string name="msg_arch_arm64">64 位元（arm64-v8a）</string>
     <string name="msg_no_version_found">没有找到 %1$s 的正式版</string>
     <string name="msg_already_downloaded">已下载</string>
     <string name="msg_partial_downloaded">已下载部分: </string>

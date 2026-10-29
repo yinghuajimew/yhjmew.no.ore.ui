@@ -171,18 +171,75 @@ final class VersionPickerDialog {
         }
     };
 
+    /**
+     * 默认列表：先拿最新版，再拿它所属大版本的全部正式版。
+     *
+     * <p>原来只显示 /last_version 返回的那一条，用户看到孤零零一个 1.26.60.4，
+     * 想装次新的版本就没辙了。改成拿最新版的大版本号（1.26）再去搜，
+     * 把同一大版本下的正式版都列出来。
+     *
+     * <p>但 API 现在只有 1.21 能搜到（1.22~1.26 全返回「查询失败」），
+     * 所以搜不到时至少保住最新那一条，不能什么都不显示。
+     */
     private void loadLatest() {
         setLoading(true, activity.getString(R.string.msg_fetching_latest));
         VersionRepo.latestOfficial(new VersionRepo.Callback() {
             @Override
-            public void onResult(List<VersionRepo.Entry> entries, String error) {
-                setLoading(false, "");
-                if (error != null || entries.isEmpty()) {
-                    // 最新版本拿不到不要紧，提示用户自己搜
+            public void onResult(final List<VersionRepo.Entry> latest, String error) {
+                if (error != null || latest.isEmpty()) {
+                    setLoading(false, "");
                     renderEmpty(activity.getString(R.string.msg_search_hint));
                     return;
                 }
-                render(entries, activity.getString(R.string.msg_latest_version_title));
+
+                final VersionRepo.Entry newest = latest.get(0);
+
+                // 1.26.60.4 -> 1.26
+                String[] parts = newest.versionAll.split("\.");
+                final String major = parts.length >= 2 ? parts[0] + "." + parts[1] : newest.versionAll;
+
+                VersionRepo.searchOfficial(major, true, new VersionRepo.Callback() {
+                    @Override
+                    public void onResult(List<VersionRepo.Entry> list, String err2) {
+                        setLoading(false, "");
+
+                        if (list == null || list.isEmpty()) {
+                            // 这个大版本搜不到 —— 至少把最新那一条显示出来
+                            render(latest, activity.getString(R.string.msg_latest_version_title));
+                            return;
+                        }
+
+                        // 把最新那条并进去（防重复）
+                        for (VersionRepo.Entry e : latest) {
+                            boolean dup = false;
+                            for (VersionRepo.Entry x : list) {
+                                if (x.versionAll.equals(e.versionAll)) {
+                                    dup = true;
+                                    break;
+                                }
+                            }
+                            if (!dup) {
+                                list.add(e);
+                            }
+                        }
+                        // 重新按版本倒序
+                        java.util.Collections.sort(list, new java.util.Comparator<VersionRepo.Entry>() {
+                            @Override
+                            public int compare(VersionRepo.Entry a, VersionRepo.Entry b) {
+                                long[] ka = a.key();
+                                long[] kb = b.key();
+                                for (int i = 0; i < 4; i++) {
+                                    if (ka[i] != kb[i]) {
+                                        return kb[i] > ka[i] ? 1 : -1;
+                                    }
+                                }
+                                return 0;
+                            }
+                        });
+
+                        render(list, activity.getString(R.string.msg_official_versions, major));
+                    }
+                });
             }
         });
     }
@@ -292,7 +349,9 @@ final class VersionPickerDialog {
 
         TextView tvSize = new TextView(activity);
         String size = e.fileSize == null ? "" : e.fileSize;
-        tvSize.setText("  " + size);
+        // 标出会下哪个架构：有 ARMv8 就用 64 位，没有才退回 32 位
+        String arch = archLabel(e);
+        tvSize.setText("  " + size + (arch.isEmpty() ? "" : "  " + arch));
         tvSize.setTextSize(11f);
         tvSize.setTextColor(Color.parseColor("#888888"));
         top.addView(tvSize);
@@ -335,6 +394,26 @@ final class VersionPickerDialog {
         });
 
         return row;
+    }
+
+    /**
+     * 这个版本会下哪个架构。
+     *
+     * <p>默认 64 位（arm64-v8a）：现在在售的机器基本都是 64 位，
+     * 32 位包只是给极老的设备兜底。只有 OneDrive 里没有 ARMv8 时才用 v7a。
+     */
+    private String archLabel(VersionRepo.Entry e) {
+        if (e.links == null) {
+            return "";
+        }
+        org.json.JSONObject od = e.links.optJSONObject("OneDrive");
+        if (od == null) {
+            return "";
+        }
+        if (!od.optString("ARMv8", "").isEmpty()) {
+            return activity.getString(R.string.msg_arch_arm64);
+        }
+        return "32-bit (armv7)";
     }
 
     /** 点版本不直接下，先确认 —— 一个包 700MB+，误触代价太大 */

@@ -472,8 +472,9 @@ public class MainActivity extends Activity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    // 先弹出下载页再开始，否则 refresh() 时 list 还是 null
                                     new DownloadManagerDialog(MainActivity.this)
-                                            .startDownload(entry.versionAll, direct);
+                                            .showAndDownload(entry.versionAll, direct);
                                 }
                             });
                         } catch (Exception e) {

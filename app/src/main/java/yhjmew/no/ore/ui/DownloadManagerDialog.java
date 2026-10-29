@@ -70,9 +70,17 @@ final class DownloadManagerDialog {
     }
 
     void refresh() {
+        // list 只在 show() 之后才有。startDownload() 会调这里，
+        // 但那时可能还没有任何界面（用户从版本列表直接点下载）。
+        if (list == null) {
+            return;
+        }
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (list == null) {
+                    return;
+                }
                 list.removeAllViews();
                 float dp = activity.getResources().getDisplayMetrics().density;
 
@@ -96,6 +104,7 @@ final class DownloadManagerDialog {
                 for (File f : show) {
                     list.addView(buildRow(f, dp));
                 }
+
             }
         });
     }
@@ -270,6 +279,12 @@ final class DownloadManagerDialog {
                 }).start();
             }
         });
+    }
+
+    /** 打开下载页并立刻开始下载（从版本列表点进来时用） */
+    void showAndDownload(final String versionAll, final String directUrl) {
+        show();
+        startDownload(versionAll, directUrl);
     }
 
     /** 真正开始下载，进度写进这一行 */

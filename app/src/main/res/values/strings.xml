@@ -20,6 +20,8 @@
     <string name="msg_search_hint">Type a version to search (1.21 and above)</string>
     <string name="msg_latest_version_title">Latest official version</string>
     <string name="msg_search_result">Search results</string>
+    <string name="msg_official_versions">Official versions %1$s</string>
+    <string name="msg_arch_arm64">64-bit (arm64-v8a)</string>
     <string name="msg_no_version_found">No official version found for %1$s</string>
     <string name="msg_already_downloaded">Downloaded</string>
     <string name="msg_partial_downloaded">Partially downloaded: </string>
