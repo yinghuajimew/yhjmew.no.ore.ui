@@ -44,6 +44,23 @@ public class ApkProcessor {
     private static final int SO_TYPE_STANDALONE = 1;
     private static final String PREF_SO = "SoConfig";
 
+    /**
+     * 输出包里所有条目统一使用的时间戳：2008-01-01 00:00:00。
+     *
+     * <p>为什么不用 {@code ZipEntry.setTime(long)}：它收的是 1970 纪元毫秒，
+     * 内部还要按**本地时区**拆成年月日再转 DOS 位域。同一次构建在北京是
+     * 2008-01-01 00:00，在纽约就成了 2007-12-31 11:00，做不到"统一"。
+     * {@code setTimeLocal} 没有时区问题，但它是 API 24 才有的，minSdk 14 用不了。
+     *
+     * <p>所以直接反射写 ZipEntry 的 {@code xdostime} 字段 —— 那正是
+     * ZipOutputStream 写本地头时用的值，绕开所有换算。写不进去就退回
+     * setTime，至少不会崩。
+     */
+    private static final long FIXED_DOS_TIME = 0x38210000L;   // 2008-01-01 00:00 的 DOS 位域
+
+    /** 2008-01-01 00:00:00 UTC 的毫秒值，反射失败时兜底用 */
+    private static final long FIXED_EPOCH_MS = 1199145600000L;
+
     /** 注入 dex 的独有类名前缀，用来识别「上次打包的产物」 */
     private static final byte[] INJECTED_DEX_MARKER =
             "Ldev/yejdhi/loader/".getBytes(java.nio.charset.Charset.forName("UTF-8"));
@@ -328,6 +345,7 @@ public class ApkProcessor {
 
                     if (injected) {
                         ZipEntry newEntry = new ZipEntry(entryName);
+                        applyFixedTime(newEntry);
                         zos.putNextEntry(newEntry);
                         FileInputStream fisDexOut = new FileInputStream(tempDexOut);
                         Utils.copyStreamToStream(fisDexOut, zos);
@@ -336,6 +354,7 @@ public class ApkProcessor {
                         tempDexOut.delete();
                     } else {
                         ZipEntry newEntry = new ZipEntry(entryName);
+                        applyFixedTime(newEntry);
                         copyZipEntryAttributes(entry, newEntry);
                         zos.putNextEntry(newEntry);
                         FileInputStream fisDexIn = new FileInputStream(tempDexIn);
@@ -347,6 +366,7 @@ public class ApkProcessor {
                     tempDexIn.delete();
                 } else {
                     ZipEntry newEntry = new ZipEntry(entryName);
+                    applyFixedTime(newEntry);
                     copyZipEntryAttributes(entry, newEntry);
                     zos.putNextEntry(newEntry);
                     Utils.copyStreamToStream(is, zos);
@@ -444,15 +464,18 @@ public class ApkProcessor {
 
     private boolean isInjectedDex(ZipFile zipFile, ZipEntry entry) {
         InputStream is = null;
+        byte[] head = null;
         try {
             is = zipFile.getInputStream(entry);
             if (is == null) {
                 return false;
             }
+
+            // 流式找 dev.yejdhi.loader 命名空间 —— 这是外部加载器独有的，
+            // 游戏本体的 dex 里不会出现，命中即可判定为上次打包的产物。
             byte[] marker = INJECTED_DEX_MARKER;
             int matched = 0;
             int b;
-            // 单趟流式匹配，避免把几十 MB 的 dex 整个读进内存
             while ((b = is.read()) != -1) {
                 if ((byte) b == marker[matched]) {
                     matched++;
@@ -609,6 +632,7 @@ public class ApkProcessor {
             boolean isSoFile = zipPath.endsWith(".so");
 
             ZipEntry entry = new ZipEntry(zipPath);
+            applyFixedTime(entry);
 
             if (isSoFile) {
                 byte[] data = Utils.readAllBytes(is);
@@ -643,6 +667,49 @@ public class ApkProcessor {
     /**
      * 对齐到 4K
      */
+    /** ZipEntry 里真正被写进 ZIP 的 DOS 时间字段 */
+    private static java.lang.reflect.Field sDosTimeField;
+    private static boolean sDosTimeFieldReady;
+
+    /**
+     * 把条目的时间戳钉死到 2008-01-01 00:00。
+     *
+     * <p>新建的 ZipEntry 不设时间会取当前时刻，这就是「每次打包时间都不一样」
+     * 的原因。游戏本体原有的条目时间来自官方构建，保留也没意义。
+     *
+     * <p>字段类型要注意：AOSP 的 ZipEntry 里是 {@code int xdostime}，
+     * OpenJDK 早期版本也是 int、后来改成了 long。用 setInt/setLong 按实际
+     * 类型写，两边都能用；类型对不上会抛 IllegalArgumentException。
+     */
+    private void applyFixedTime(ZipEntry entry) {
+        if (!sDosTimeFieldReady) {
+            sDosTimeFieldReady = true;
+            try {
+                java.lang.reflect.Field f = ZipEntry.class.getDeclaredField("xdostime");
+                f.setAccessible(true);
+                sDosTimeField = f;
+            } catch (Throwable t) {
+                sDosTimeField = null;
+            }
+        }
+
+        if (sDosTimeField != null) {
+            try {
+                if (sDosTimeField.getType() == int.class) {
+                    sDosTimeField.setInt(entry, (int) FIXED_DOS_TIME);
+                } else {
+                    sDosTimeField.setLong(entry, FIXED_DOS_TIME);
+                }
+                return;
+            } catch (Throwable ignore) {
+                // 落到下面的兜底
+            }
+        }
+
+        // 反射不可用（个别 ROM 会限制）：退回 setTime，时区不同会有偏差
+        entry.setTime(FIXED_EPOCH_MS);
+    }
+
     private void alignTo4K(ZipOutputStream zos) throws Exception {
         try {
             java.lang.reflect.Field writtenField = java.util.zip.DeflaterOutputStream.class.getDeclaredField("written");
@@ -667,6 +734,7 @@ public class ApkProcessor {
     private void putModifiedEntry(ZipOutputStream zos, ZipEntry originalEntry, String entryName, byte[] newData)
             throws Exception {
         ZipEntry newEntry = new ZipEntry(entryName);
+        applyFixedTime(newEntry);
 
         if (originalEntry.getMethod() == ZipEntry.STORED) {
             newEntry.setMethod(ZipEntry.STORED);
