@@ -33,6 +33,10 @@
     <string name="btn_open_download_page">下载列表</string>
     <string name="title_download_page">已下载的文件</string>
     <string name="msg_no_downloads">还没有下载的文件</string>
+    <string name="msg_save_to">保存位置:</string>
+    <string name="msg_download_paused">已暂停于 </string>
+    <string name="msg_download_retrying">连接断开，正在重试...</string>
+    <string name="btn_show_in_folder">打开文件夹</string>
     <string name="btn_pause">暂停</string>
     <string name="btn_resume">继续</string>
     <string name="btn_delete_download">删除</string>

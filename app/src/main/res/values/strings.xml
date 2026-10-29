@@ -33,6 +33,10 @@
     <string name="btn_open_download_page">Download list</string>
     <string name="title_download_page">Downloaded files</string>
     <string name="msg_no_downloads">No downloaded files</string>
+    <string name="msg_save_to">Saved to:</string>
+    <string name="msg_download_paused">Paused at </string>
+    <string name="msg_download_retrying">Connection lost, retrying...</string>
+    <string name="btn_show_in_folder">Open folder</string>
     <string name="btn_pause">Pause</string>
     <string name="btn_resume">Resume</string>
     <string name="btn_delete_download">Delete</string>

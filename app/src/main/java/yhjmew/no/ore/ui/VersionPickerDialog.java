@@ -359,12 +359,20 @@ final class VersionPickerDialog {
         row.addView(top);
 
         // 已下载标记
+        boolean running = GameDownloader.isRunning(e.versionAll);
+        GameDownloader.Task task = GameDownloader.taskOf(e.versionAll);
         boolean downloaded = GameDownloader.isDownloaded(activity, e.versionAll);
         long partial = GameDownloader.downloadedBytes(activity, e.versionAll);
 
         TextView tvState = new TextView(activity);
         tvState.setTextSize(11f);
-        if (downloaded) {
+        if (running && task != null) {
+            // 正在下：显示百分比，用户不用点进去也能看到进度
+            String pct = task.lastTotal > 0 ? task.percent() + "%  " : "";
+            tvState.setText(activity.getString(R.string.log_downloading) + "  "
+                    + pct + GameDownloader.fmt(task.lastDownloaded));
+            tvState.setTextColor(Color.parseColor("#1565C0"));
+        } else if (downloaded) {
             tvState.setText(activity.getString(R.string.msg_already_downloaded));
             tvState.setTextColor(Color.parseColor("#2E7D32"));
         } else if (partial > 0) {

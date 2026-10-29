@@ -15,23 +15,38 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * 下载管理页：列出所有已下载 / 下载中的安装包，可暂停、继续、删除。
+ * 下载管理页：列出已下载 / 下载中的安装包，可暂停、继续、删除。
  *
- * <p>暂停不销毁进度 —— 文件留在原地，下次继续时用 HTTP Range 接着下。
+ * <p>进度信息存在 {@link GameDownloader.Task} 里（静态），
+ * 所以关掉对话框再打开、或者从版本列表重新进来，都能立刻看到真实进度，
+ * 不用等下一次回调。
  */
 final class DownloadManagerDialog {
 
-    /** 进行中的任务，按版本号索引；退出对话框时也要能继续跑 */
-    static final java.util.Map<String, GameDownloader.Task> RUNNING =
-            new java.util.HashMap<String, GameDownloader.Task>();
-
     private final Activity activity;
+
+    /** 每次 show() 重新构建的行视图，key 是版本号 */
+    private final java.util.Map<String, Row> rows =
+            new java.util.HashMap<String, Row>();
+
     private LinearLayout list;
     private TextView tvEmpty;
-    /** 当前正在下载那一行的进度条，用来实时更新 */
-    private static ProgressBar currentBar;
+    private TextView tvDir;
+
+    private AlertDialog dialog;
+
+    private static final class Row {
+        ProgressBar bar;
+        TextView tvPct;
+        TextView tvSize;
+        TextView tvState;
+        Button btnPause;
+    }
 
     DownloadManagerDialog(Activity activity) {
         this.activity = activity;
@@ -39,11 +54,20 @@ final class DownloadManagerDialog {
 
     void show() {
         float dp = activity.getResources().getDisplayMetrics().density;
+        int pad = (int) (16 * dp);
 
         LinearLayout root = new LinearLayout(activity);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = (int) (16 * dp);
         root.setPadding(pad, pad, pad, pad);
+
+        // ---- 保存位置：用户必须知道文件下到哪了 ----
+        tvDir = new TextView(activity);
+        tvDir.setTextSize(11f);
+        tvDir.setTextColor(Color.parseColor("#666666"));
+        tvDir.setText(activity.getString(R.string.msg_save_to) + "\n"
+                + GameDownloader.displayDir(activity));
+        tvDir.setPadding(0, 0, 0, (int) (8 * dp));
+        root.addView(tvDir);
 
         tvEmpty = new TextView(activity);
         tvEmpty.setText(activity.getString(R.string.msg_no_downloads));
@@ -60,18 +84,49 @@ final class DownloadManagerDialog {
         scroll.addView(list);
         root.addView(scroll);
 
-        new AlertDialog.Builder(activity)
+        dialog = new AlertDialog.Builder(activity)
                 .setTitle(activity.getString(R.string.title_download_page))
                 .setView(root)
                 .setPositiveButton(activity.getString(R.string.btn_ok), null)
-                .show();
+                .create();
+
+        // 关闭时停掉刷新循环，否则对话框没了还在每 500ms 跑
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface d) {
+                if (mTicker != null && list != null) {
+                    list.removeCallbacks(mTicker);
+                }
+                dialog = null;
+            }
+        });
+        dialog.show();
 
         refresh();
+
+        // 每 500ms 刷一次界面 —— 下载线程只更新 Task 里的数字，
+        // 由这里统一读出来显示，省得两边抢 UI 线程。
+        mTicker = new Runnable() {
+            @Override
+            public void run() {
+                updateProgressOnly();
+                if (dialog != null && dialog.isShowing()) {
+                    list.postDelayed(this, 500);
+                }
+            }
+        };
+        list.postDelayed(mTicker, 500);
+    }
+
+    private Runnable mTicker;
+
+    /** 打开下载页并立刻开始下载（从版本列表点进来时用） */
+    void showAndDownload(final String versionAll, final String directUrl) {
+        show();
+        startDownload(versionAll, directUrl);
     }
 
     void refresh() {
-        // list 只在 show() 之后才有。startDownload() 会调这里，
-        // 但那时可能还没有任何界面（用户从版本列表直接点下载）。
         if (list == null) {
             return;
         }
@@ -81,110 +136,155 @@ final class DownloadManagerDialog {
                 if (list == null) {
                     return;
                 }
+                rows.clear();
                 list.removeAllViews();
+
                 float dp = activity.getResources().getDisplayMetrics().density;
 
-                File[] files = GameDownloader.listAll(activity);
-                java.util.List<File> show = new java.util.ArrayList<File>();
-                for (File f : files) {
+                // 磁盘上的文件
+                List<File> show = new ArrayList<File>();
+                for (File f : GameDownloader.listAll(activity)) {
                     if (f != null && f.isFile() && f.getName().endsWith(".apk") && f.length() > 0) {
                         show.add(f);
                     }
                 }
 
-                tvEmpty.setVisibility(show.isEmpty() ? View.VISIBLE : View.GONE);
+                // 正在下但还没落盘的（刚点开始，文件还没建）
+                java.util.Set<String> onDisk = new java.util.HashSet<String>();
+                for (File f : show) {
+                    onDisk.add(versionFromFile(f.getName()));
+                }
 
-                java.util.Collections.sort(show, new java.util.Comparator<File>() {
+                Collections.sort(show, new java.util.Comparator<File>() {
                     @Override
                     public int compare(File a, File b) {
                         return Long.valueOf(b.lastModified()).compareTo(a.lastModified());
                     }
                 });
 
+                tvEmpty.setVisibility(show.isEmpty() ? View.VISIBLE : View.GONE);
+
                 for (File f : show) {
-                    list.addView(buildRow(f, dp));
+                    list.addView(buildRow(versionFromFile(f.getName()), f.length(), dp));
                 }
 
+                updateProgressOnly();
             }
         });
     }
 
-    private View buildRow(final File f, float dp) {
-        final String version = versionFromFile(f.getName());
+    /** 只更新进度数字，不重建视图（每 500ms 跑一次） */
+    private void updateProgressOnly() {
+        for (final java.util.Map.Entry<String, Row> e : rows.entrySet()) {
+            String ver = e.getKey();
+            Row r = e.getValue();
+            GameDownloader.Task t = GameDownloader.taskOf(ver);
 
-        LinearLayout row = new LinearLayout(activity);
-        row.setOrientation(LinearLayout.VERTICAL);
+            if (t == null || t.finished) {
+                r.bar.setVisibility(View.GONE);
+                r.tvPct.setVisibility(View.GONE);
+                continue;
+            }
+
+            r.bar.setVisibility(View.VISIBLE);
+            r.tvPct.setVisibility(View.VISIBLE);
+
+            int pct = t.percent();
+            r.bar.setProgress(pct);
+            r.tvPct.setText(pct + "%");
+
+            if (t.lastTotal > 0) {
+                r.tvSize.setText(GameDownloader.fmt(t.lastDownloaded)
+                        + " / " + GameDownloader.fmt(t.lastTotal));
+            } else {
+                r.tvSize.setText(GameDownloader.fmt(t.lastDownloaded));
+            }
+
+            r.btnPause.setText(activity.getString(R.string.btn_pause));
+        }
+    }
+
+    private View buildRow(final String version, long fileLength, float dp) {
+        Row row = new Row();
+
+        LinearLayout box = new LinearLayout(activity);
+        box.setOrientation(LinearLayout.VERTICAL);
         int vp = (int) (10 * dp);
-        row.setPadding(0, vp, 0, vp);
+        box.setPadding(0, vp, 0, vp);
+
+        // 版本号 + 暂停/继续按钮同一行
+        LinearLayout head = new LinearLayout(activity);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tvName = new TextView(activity);
         tvName.setText(version);
         tvName.setTextSize(15f);
         tvName.setTextColor(Color.BLACK);
         tvName.setTypeface(null, Typeface.BOLD);
-        row.addView(tvName);
+        tvName.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        head.addView(tvName);
 
-        TextView tvInfo = new TextView(activity);
-        tvInfo.setText(GameDownloader.fmt(f.length()));
-        tvInfo.setTextSize(11f);
-        tvInfo.setTextColor(Color.parseColor("#888888"));
-        row.addView(tvInfo);
+        row.tvPct = new TextView(activity);
+        row.tvPct.setTextSize(14f);
+        row.tvPct.setTextColor(Color.parseColor("#2E7D32"));
+        row.tvPct.setTypeface(null, Typeface.BOLD);
+        head.addView(row.tvPct);
 
-        final GameDownloader.Task running = RUNNING.get(version);
+        box.addView(head);
 
-        final ProgressBar bar = new ProgressBar(activity, null,
+        row.tvSize = new TextView(activity);
+        row.tvSize.setTextSize(11f);
+        row.tvSize.setTextColor(Color.parseColor("#888888"));
+        row.tvSize.setText(GameDownloader.fmt(fileLength));
+        box.addView(row.tvSize);
+
+        row.bar = new ProgressBar(activity, null,
                 android.R.attr.progressBarStyleHorizontal);
-        bar.setMax(100);
-        bar.setProgress(0);
-        bar.setVisibility(running != null ? View.VISIBLE : View.GONE);
+        row.bar.setMax(100);
         LinearLayout.LayoutParams bpl = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, (int) (4 * dp));
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (5 * dp));
         bpl.topMargin = (int) (6 * dp);
-        bar.setLayoutParams(bpl);
-        row.addView(bar);
-        if (running != null) {
-            currentBar = bar;
-        }
+        row.bar.setLayoutParams(bpl);
+        box.addView(row.bar);
 
+        // 按钮行
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        int tm = (int) (8 * dp);
         LinearLayout.LayoutParams apl = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        apl.topMargin = tm;
+        apl.topMargin = (int) (8 * dp);
         actions.setLayoutParams(apl);
 
-        // ---- 暂停 / 继续 ----
-        Button btnPause = new Button(activity);
-        btnPause.setTextSize(12f);
-        btnPause.setBackground(activity.getResources().getDrawable(R.drawable.bg_black_border));
-        btnPause.setTextColor(Color.BLACK);
-        btnPause.setLayoutParams(new LinearLayout.LayoutParams(0,
+        row.btnPause = new Button(activity);
+        row.btnPause.setTextSize(12f);
+        row.btnPause.setBackground(activity.getResources().getDrawable(R.drawable.bg_black_border));
+        row.btnPause.setTextColor(Color.BLACK);
+        row.btnPause.setLayoutParams(new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        if (running != null) {
-            btnPause.setText(activity.getString(R.string.btn_pause));
-            btnPause.setOnClickListener(new View.OnClickListener() {
+        final GameDownloader.Task running = GameDownloader.taskOf(version);
+        if (running != null && !running.finished) {
+            row.btnPause.setText(activity.getString(R.string.btn_pause));
+            row.btnPause.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     running.pause();
-                    RUNNING.remove(version);
                     refresh();
                 }
             });
         } else {
-            btnPause.setText(activity.getString(R.string.btn_resume));
-            btnPause.setOnClickListener(new View.OnClickListener() {
+            row.btnPause.setText(activity.getString(R.string.btn_resume));
+            row.btnPause.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    // 继续需要直链，这里从版本库里重新解析一次
-                    startResume(version, f);
+                    startResume(version);
                 }
             });
         }
-        actions.addView(btnPause);
+        actions.addView(row.btnPause);
 
-        // ---- 删除 ----
         Button btnDel = new Button(activity);
         btnDel.setTextSize(12f);
         btnDel.setText(activity.getString(R.string.btn_delete_download));
@@ -204,11 +304,11 @@ final class DownloadManagerDialog {
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface d, int w) {
-                                        GameDownloader.Task t = RUNNING.remove(version);
+                                        GameDownloader.Task t = GameDownloader.taskOf(version);
                                         if (t != null) {
                                             t.cancel();
                                         }
-                                        f.delete();
+                                        GameDownloader.delete(activity, version);
                                         refresh();
                                     }
                                 })
@@ -218,7 +318,7 @@ final class DownloadManagerDialog {
         });
         actions.addView(btnDel);
 
-        row.addView(actions);
+        box.addView(actions);
 
         View line = new View(activity);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -226,9 +326,10 @@ final class DownloadManagerDialog {
         lp.topMargin = (int) (10 * dp);
         line.setLayoutParams(lp);
         line.setBackgroundColor(Color.parseColor("#E0E0E0"));
-        row.addView(line);
+        box.addView(line);
 
-        return row;
+        rows.put(version, row);
+        return box;
     }
 
     /** 从 Minecraft_1.26.60.4_v8a.apk 反推 1.26.60.4 */
@@ -240,17 +341,17 @@ final class DownloadManagerDialog {
         if (n.endsWith(".apk")) {
             n = n.substring(0, n.length() - 4);
         }
-        if (n.endsWith("_v8a")) {
+        if (n.endsWith("_v8a") || n.endsWith("_v7a")) {
             n = n.substring(0, n.length() - 4);
         }
         return n;
     }
 
     /** 续传：重新问一次直链，然后从已有字节继续 */
-    private void startResume(final String version, final File f) {
+    private void startResume(final String version) {
         VersionRepo.searchOfficial(version, false, new VersionRepo.Callback() {
             @Override
-            public void onResult(java.util.List<VersionRepo.Entry> entries, String error) {
+            public void onResult(List<VersionRepo.Entry> entries, String error) {
                 if (error != null || entries.isEmpty()) {
                     toast(activity.getString(R.string.err_resume_lookup));
                     return;
@@ -281,33 +382,28 @@ final class DownloadManagerDialog {
         });
     }
 
-    /** 打开下载页并立刻开始下载（从版本列表点进来时用） */
-    void showAndDownload(final String versionAll, final String directUrl) {
-        show();
-        startDownload(versionAll, directUrl);
-    }
-
-    /** 真正开始下载，进度写进这一行 */
+    /** 真正开始下载 */
     void startDownload(final String versionAll, final String directUrl) {
-        final GameDownloader.Task task = GameDownloader.download(
-                activity, directUrl, versionAll, new GameDownloader.Listener() {
+        // 已有同名任务在跑就不重复开
+        GameDownloader.Task exist = GameDownloader.taskOf(versionAll);
+        if (exist != null && !exist.finished) {
+            refresh();
+            return;
+        }
+
+        GameDownloader.download(activity, directUrl, versionAll,
+                new GameDownloader.Listener() {
                     @Override
-                    public void onProgress(final long downloaded, final long total) {
-                        activity.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (total > 0 && currentBar != null) {
-                                    currentBar.setProgress((int) (downloaded * 100 / total));
-                                }
-                            }
-                        });
+                    public void onProgress(long downloaded, long total) {
+                        // 由 updateProgressOnly 定时读取，这里不用动 UI
                     }
 
-                    @Override public void onLog(String message) { }
+                    @Override
+                    public void onLog(String message) {
+                    }
 
                     @Override
                     public void onDone(final File file) {
-                        RUNNING.remove(versionAll);
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -320,7 +416,6 @@ final class DownloadManagerDialog {
 
                     @Override
                     public void onError(final String message) {
-                        RUNNING.remove(versionAll);
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -335,13 +430,28 @@ final class DownloadManagerDialog {
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                toast(activity.getString(R.string.msg_download_paused,
+                                        GameDownloader.fmt(downloaded)));
                                 refresh();
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onRetry(int attempt, int max, String reason) {
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (tvEmpty.getVisibility() == View.VISIBLE) {
+                                    tvEmpty.setText(activity.getString(
+                                            R.string.msg_download_retrying));
+                                    tvEmpty.setVisibility(View.VISIBLE);
+                                }
                             }
                         });
                     }
                 });
 
-        RUNNING.put(versionAll, task);
         refresh();
     }
 
