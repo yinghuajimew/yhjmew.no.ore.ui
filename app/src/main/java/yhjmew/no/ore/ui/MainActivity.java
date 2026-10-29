@@ -157,6 +157,10 @@ public class MainActivity extends Activity {
         printLog(getString(R.string.log_current_signature) + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
         printLog(getString(R.string.log_current_so_type) + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
 
+        // updateManager 是懒加载的（第一次 checkForUpdates 时才建），
+        // 这里要主动确保它存在，否则 NPE。
+        ensureUpdateManager();
+
         // 清掉过时的安装包（比当前版本旧的）。
         // 下好待装的那份会留下 —— 用户点一下就能装，不用重下。
         updateManager.cleanupOldApks(currentAppVersion());
@@ -176,6 +180,13 @@ public class MainActivity extends Activity {
         showPendingInstallHintIfAny();
     }
 
+    /** 确保 UpdateManager 已创建（它是懒加载的，多处要用） */
+    private void ensureUpdateManager() {
+        if (updateManager == null) {
+            updateManager = new UpdateManager(this);
+        }
+    }
+
     /** 当前应用的 versionName，用作「哪些下载包已经过时」的判断依据 */
     private String currentAppVersion() {
         try {
@@ -192,9 +203,7 @@ public class MainActivity extends Activity {
      * 用户点了稍后安装、或者从安装界面返回，包还在私有目录里。
      */
     private void showPendingInstallHintIfAny() {
-        if (updateManager == null) {
-            return;
-        }
+        ensureUpdateManager();
         final java.util.List<File> pending = updateManager.findPendingApks();
         if (pending.isEmpty()) {
             return;
@@ -1344,9 +1353,7 @@ public class MainActivity extends Activity {
  * @param isManual 是否为手动检查
  */
 private void checkForUpdates(final boolean isManual) {
-    if (updateManager == null) {
-        updateManager = new UpdateManager(this);
-    }
+    ensureUpdateManager();
     
     updateManager.checkUpdate(new UpdateManager.UpdateCallback() {
         @Override
@@ -1419,9 +1426,7 @@ private void checkForUpdates() {
 
     private void startDownload(String downloadUrl, String fileName) {
         showDownloadProgress();
-        if (updateManager == null) {
-            updateManager = new UpdateManager(this);
-        }
+        ensureUpdateManager();
         updateManager.downloadApk(downloadUrl, fileName);
     }
 
