@@ -29,6 +29,11 @@
             </intent-filter>
         </activity>
 
+        <!-- 通知栏展开后的「暂停 / 继续」按钮落在它上面 -->
+        <receiver
+            android:name=".DownloadActionReceiver"
+            android:exported="false" />
+
         <!-- 下载时挂前台通知，避免切后台被系统掐断 -->
         <service
             android:name=".DownloadService"

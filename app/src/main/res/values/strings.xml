@@ -46,6 +46,13 @@
     <string name="title_delete_download">Delete file</string>
     <string name="msg_confirm_delete_download">Delete Minecraft %1$s?</string>
     <string name="msg_download_finished">Download complete: </string>
+    <string name="msg_download_paused_label">Paused</string>
+    <string name="msg_dl_merging">Merging files...</string>
+    <string name="msg_dl_notif_paused">Download paused</string>
+    <string name="msg_dl_notif_expand_hint">Expand for pause</string>
+    <string name="msg_dl_notif_done">Download complete</string>
+    <string name="msg_dl_notif_failed">Download failed</string>
+    <string name="msg_download_threads">%1$d connections</string>
     <string name="err_version_too_old">Only Minecraft %1$s and above are supported</string>
     <string name="err_no_download_link">No download link</string>
     <string name="err_no_onedrive_link_hint">This version has no OneDrive mirror. Only OneDrive is usable inside the app.</string>

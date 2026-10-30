@@ -42,6 +42,9 @@ public class MainActivity extends Activity {
     private static final int PICK_MODE_NORMAL = 1;
     private static final int PICK_MODE_CLONE = 2;
 
+    /** 通知栏「继续」失败时带上它，让应用自己打开下载页 */
+    static final String EXTRA_OPEN_DOWNLOADS = "yhjmew.no.ore.ui.OPEN_DOWNLOADS";
+
     private static final String DEFAULT_PKG_NAME = "com.mojang.minecraftpe";
     private static final int SO_PKG_MAX_LENGTH = 34;
 
@@ -238,8 +241,31 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openDownloadsIfAsked(intent);
+    }
+
+    /** 通知栏真的把用户丢回来时，直接把下载页开着 */
+    private void openDownloadsIfAsked(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN_DOWNLOADS, false)) {
+            return;
+        }
+        intent.removeExtra(EXTRA_OPEN_DOWNLOADS);
+        showDownloadManager();
+    }
+
+    /** 打开下载管理页（主页和版本列表都能进来） */
+    void showDownloadManager() {
+        new DownloadManagerDialog(this).show();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+
+        openDownloadsIfAsked(getIntent());
 
         if (pendingInstallApk != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (getPackageManager().canRequestPackageInstalls()) {
@@ -361,44 +387,24 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * 让用户选「普通处理 / 共存处理」，然后直接开始。
+     * 按指定模式开始处理一个已经在本机的文件。
      *
-     * <p>下载页点某个包就调这里 —— 不再要求用户回到主界面、
-     * 点处理按钮、再从文件管理器里把同一个文件找一遍。
+     * <p>下载页选完模式后直接走这里，会先确认存储权限再动包。
      */
-    void startProcessDownloaded(final File apkFile) {
+    void startProcessingFile(final File apkFile, final boolean cloneMode) {
         if (apkFile == null || !apkFile.exists()) {
             showToast(getString(R.string.err_apk_missing));
             return;
         }
-        // 先确认存储权限（写输出目录需要）
+        // 先确认存储权限（写输出目录需要）。没权限时这里会拉起授权页，
+        // 回来之后用户再点一次「处理」即可。
         if (!checkAndRequestPermissions()) {
             return;
         }
 
         final Uri uri = Uri.fromFile(apkFile);
-
-        new android.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.title_choose_mode))
-                .setMessage(apkFile.getName())
-                .setPositiveButton(getString(R.string.btn_normal_processing),
-                        new android.content.DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(android.content.DialogInterface d, int w) {
-                                resolveOriginalFileInfo(uri);
-                                prepareAndProcess(uri, PICK_MODE_NORMAL);
-                            }
-                        })
-                .setNeutralButton(getString(R.string.btn_coexistence_processing),
-                        new android.content.DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(android.content.DialogInterface d, int w) {
-                                resolveOriginalFileInfo(uri);
-                                prepareAndProcess(uri, PICK_MODE_CLONE);
-                            }
-                        })
-                .setNegativeButton(getString(R.string.btn_cancel), null)
-                .show();
+        resolveOriginalFileInfo(uri);
+        prepareAndProcess(uri, cloneMode ? PICK_MODE_CLONE : PICK_MODE_NORMAL);
     }
 
     private String getFileNameFromUri(Uri uri) {
@@ -454,6 +460,16 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    /**
+     * 给下载页用的权限预检：没权限就拉起授权页，返回 false。
+     *
+     * <p>下载页选完模式后要先确认这一步，再关掉自己 ——
+     * 否则关完才发现没权限，用户得重头再点一遍。
+     */
+    boolean ensureStoragePermission() {
+        return checkAndRequestPermissions();
     }
 
     private boolean checkAndRequestPermissions() {

@@ -46,6 +46,13 @@
     <string name="title_delete_download">刪除檔案</string>
     <string name="msg_confirm_delete_download">删除 Minecraft %1$s？</string>
     <string name="msg_download_finished">下載完成: </string>
+    <string name="msg_download_paused_label">已暫停</string>
+    <string name="msg_dl_merging">正在合併檔案...</string>
+    <string name="msg_dl_notif_paused">下載已暫停</string>
+    <string name="msg_dl_notif_expand_hint">展開可暫停</string>
+    <string name="msg_dl_notif_done">下載完成</string>
+    <string name="msg_dl_notif_failed">下載失敗</string>
+    <string name="msg_download_threads">%1$d 條連線</string>
     <string name="err_version_too_old">只支持 Minecraft %1$s 及以上版本</string>
     <string name="err_no_download_link">没有下载链接</string>
     <string name="err_no_onedrive_link_hint">该版本没有 OneDrive 镜像。应用内只能走 OneDrive，其余网盘需登录或只能在各自 App 内下载。</string>

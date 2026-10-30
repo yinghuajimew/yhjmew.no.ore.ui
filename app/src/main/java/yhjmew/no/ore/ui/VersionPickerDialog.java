@@ -49,6 +49,7 @@ final class VersionPickerDialog {
     private ProgressBar progress;
     private EditText etSearch;
     private String lastQuery = "";
+    private AlertDialog dialogRef;
 
     VersionPickerDialog(Activity activity, OnPickListener listener) {
         this.activity = activity;
@@ -126,7 +127,13 @@ final class VersionPickerDialog {
         btnDownloads.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new DownloadManagerDialog(activity).show();
+                // 收起版本列表再进下载页，避免两层对话框叠着
+                dialogRef.dismiss();
+                if (activity instanceof MainActivity) {
+                    ((MainActivity) activity).showDownloadManager();
+                } else {
+                    new DownloadManagerDialog(activity).show();
+                }
             }
         });
         root.addView(btnDownloads);
@@ -136,6 +143,7 @@ final class VersionPickerDialog {
                 .setView(root)
                 .setNegativeButton(activity.getString(R.string.btn_cancel), null)
                 .create();
+        dialogRef = dialog;
         dialog.show();
 
         btnSearch.setOnClickListener(new View.OnClickListener() {
@@ -456,6 +464,10 @@ final class VersionPickerDialog {
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface d, int w) {
+                                // 收起版本列表：接下来是下载页，两层对话框叠着没法操作
+                                if (dialogRef != null && dialogRef.isShowing()) {
+                                    dialogRef.dismiss();
+                                }
                                 if (listener != null) {
                                     listener.onDownloadRequested(e);
                                 }
