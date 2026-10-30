@@ -10,10 +10,6 @@ import android.os.Environment;
 import android.os.SystemClock;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -452,20 +448,39 @@ final class GameDownloader {
     }
 
     /**
-     * 从通知栏点「继续」。任务没跑干净就等它退出来再接手。
+     * 继续一个暂停中的任务。
      *
-     * @return false 表示这条任务已经不在了（进程被杀过），界面该引导用户回应用里看
+     * <p>刚点过暂停时下载线程还在收尾（连接要一个个断、段线程要退），
+     * 这时候直接开新任务会和它抢同一批 .part 文件。所以先等它 finished，
+     * 再接手 —— 用户体感上就是「点了就继续」，中间最多几十毫秒。
+     *
+     * @return false 表示已经没有这个任务了（进程被杀过），界面该重新拿直链
      */
-    static boolean resumePaused(Context ctx, String versionAll) {
-        Task t = RUNNING.get(versionAll);
+    static boolean resumeTask(final Context ctx, final String versionAll, final Listener listener) {
+        final Task t = RUNNING.get(versionAll);
         if (t == null || t.url == null) {
             return false;
         }
-        if (!t.finished) {
-            // 还在收尾，别再开一个
-            return true;
-        }
-        download(ctx, t.url, versionAll, new SilentListener(ctx, versionAll));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                long deadline = SystemClock.elapsedRealtime() + 5000;
+                while (!t.finished && SystemClock.elapsedRealtime() < deadline) {
+                    if (!sleepMs(50)) {
+                        return;
+                    }
+                }
+                if (!t.finished) {
+                    // 5 秒还没收尾，别硬来
+                    if (listener != null) {
+                        listener.onError("still busy");
+                    }
+                    return;
+                }
+                download(ctx, t.url, versionAll, listener != null
+                        ? listener : new SilentListener(ctx, versionAll));
+            }
+        }).start();
         return true;
     }
 

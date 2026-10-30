@@ -39,7 +39,7 @@ public class DownloadActionReceiver extends BroadcastReceiver {
         }
 
         if (ACTION_RESUME.equals(action)) {
-            boolean ok = GameDownloader.resumePaused(context, version);
+            boolean ok = GameDownloader.resumeTask(context, version, null);
             if (!ok) {
                 // 进程被杀过、任务句柄没了 —— 把用户送回下载页自己点
                 try {

@@ -393,6 +393,16 @@ final class DownloadManagerDialog {
                     refresh();
                 }
             });
+        } else if (complete) {
+            // 已经下完了，「继续」在这儿其实是从头下一份新的 ——
+            // 文案得说实话，而且要先确认，别让人以为点一下只是打开
+            row.btnPause.setText(activity.getString(R.string.btn_redownload));
+            row.btnPause.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    confirmRedownload(version);
+                }
+            });
         } else {
             row.btnPause.setText(activity.getString(R.string.btn_resume));
             row.btnPause.setOnClickListener(new View.OnClickListener() {
@@ -556,9 +566,10 @@ final class DownloadManagerDialog {
             GameDownloader.Task t = GameDownloader.taskOf(version);
             if (t != null && t.url != null) {
                 // 有 url 就直接续，省一次 API 查询。
-                // 注意别去改这个 Task 的 paused/finished —— startDownload()
-                // 看到「未完成的任务」会当成重复点击直接返回。
-                startDownload(version, t.url);
+                // 别在这里改 t.paused / t.finished —— 下载线程还在收尾，
+                // 改了会让它跳出重试循环。交给 resumeTask 等它退干净再接手。
+                GameDownloader.resumeTask(activity, version, silentListener(version));
+                refresh();
                 return;
             }
         }
@@ -599,6 +610,66 @@ final class DownloadManagerDialog {
                 }).start();
             }
         });
+    }
+
+    /** 已经下完的包再点一次：说清楚是覆盖，再开 */
+    private void confirmRedownload(final String version) {
+        new AlertDialog.Builder(activity)
+                .setTitle(activity.getString(R.string.title_confirm_download))
+                .setMessage(activity.getString(R.string.msg_confirm_redownload, version))
+                .setPositiveButton(activity.getString(R.string.btn_redownload),
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface d, int w) {
+                                startResume(version);
+                            }
+                        })
+                .setNegativeButton(activity.getString(R.string.btn_cancel), null)
+                .show();
+    }
+
+    /** 续传用：只弹 toast，不动这个可能已经被关掉的对话框 */
+    private GameDownloader.Listener silentListener(final String version) {
+        return new GameDownloader.Listener() {
+            @Override
+            public void onProgress(long downloaded, long total) {
+            }
+
+            @Override
+            public void onLog(String message) {
+            }
+
+            @Override
+            public void onDone(File file) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        toast(activity.getString(R.string.msg_download_finished,
+                                GameDownloader.fmt(file.length())));
+                        refresh();
+                    }
+                });
+            }
+
+            @Override
+            public void onError(final String message) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        toast(activity.getString(R.string.err_download_failed) + message);
+                        refresh();
+                    }
+                });
+            }
+
+            @Override
+            public void onPaused(long downloaded) {
+            }
+
+            @Override
+            public void onRetry(int attempt, int max, String reason) {
+            }
+        };
     }
 
     /** 真正开始下载 */
