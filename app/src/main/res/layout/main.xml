@@ -52,7 +52,39 @@
         android:layout_centerInParent="true"
         android:orientation="vertical">
 
-        <!-- 顶部三个按钮：普通处理 / 下载游戏 / 共存处理 -->
+        <!--
+            按钮布局：下载游戏单独一行，靠右，正好压在共存处理上方。
+            原来三个按钮平铺一行，下载被夹在两个「处理」中间 ——
+            它其实是完全不同的动作（先拿包，再处理），夹在中间容易误触。
+            宽度用 300dp 的一半再减内边距，和下面两个按钮严格对齐。
+        -->
+        <LinearLayout
+            android:layout_width="300dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:layout_marginBottom="10dp">
+
+            <!-- 左半边留白，把下载按钮挤到右边 -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/btn_download_game"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_black_border"
+                android:text="@string/btn_download_game"
+                android:textColor="#000000"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginLeft="5dp" />
+        </LinearLayout>
+
+        <!-- 第二行：普通处理 / 共存处理，各占一半 -->
         <LinearLayout
             android:layout_width="300dp"
             android:layout_height="wrap_content"
@@ -70,19 +102,6 @@
                 android:textColor="#000000"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:layout_marginRight="5dp" />
-
-            <Button
-                android:id="@+id/btn_download_game"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_black_border"
-                android:text="@string/btn_download_game"
-                android:textColor="#000000"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:layout_marginLeft="5dp"
                 android:layout_marginRight="5dp" />
 
             <Button

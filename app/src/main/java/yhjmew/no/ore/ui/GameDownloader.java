@@ -40,8 +40,14 @@ final class GameDownloader {
 
     private static final int MAX_RETRY = 5;
 
-    /** 并行段数。4 段对 OpenList 够用，再多容易被限速反噬 */
-    private static final int SEGMENTS = 4;
+    /**
+     * 段文件最多铺到这么多个（.part0 ~ .part15）。
+     *
+     * <p>实际用几条由 {@link DownloadConfig#getThreads} 决定，用户可以改。
+     * 这里只是"要清理/统计多少条残片"的上界 —— 用户以前开过 16，
+     * 后来又改回 4，那些 .part8 之类的残片仍然要能找出来删掉。
+     */
+    private static final int MAX_SEGMENTS = DownloadConfig.MAX_THREADS;
 
     /** 小于这个体积不值得拆段（拆了反而多几次握手） */
     private static final long SEG_MIN_TOTAL = 8L * 1024 * 1024;
@@ -153,7 +159,7 @@ final class GameDownloader {
         if (n > 0) {
             return n;
         }
-        for (int i = 0; i < SEGMENTS; i++) {
+        for (int i = 0; i < MAX_SEGMENTS; i++) {
             File p = partFile(target, i);
             if (p.isFile()) {
                 n += p.length();
@@ -170,7 +176,7 @@ final class GameDownloader {
         if (target.exists() && !target.delete()) {
             ok = false;
         }
-        for (int i = 0; i < SEGMENTS; i++) {
+        for (int i = 0; i < MAX_SEGMENTS; i++) {
             File p = partFile(target, i);
             if (p.exists() && !p.delete()) {
                 ok = false;
@@ -195,6 +201,34 @@ final class GameDownloader {
     // 而下载线程和 UI 线程会同时读写这个表
     private static final java.util.Map<String, Task> RUNNING =
             new java.util.concurrent.ConcurrentHashMap<String, Task>();
+
+    /** 主线程投递：保证「撤前台通知」先执行，紧接着才是新通知 */
+    private static void postToMain(Runnable r) {
+        try {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(r);
+        } catch (Throwable ignore) {
+        }
+    }
+
+    private static void postDoneNotification(final Context ctx, final String version,
+                                             final long size) {
+        postToMain(new Runnable() {
+            @Override
+            public void run() {
+                showDoneNotification(ctx, version, size);
+            }
+        });
+    }
+
+    private static void postFailedNotification(final Context ctx, final String version,
+                                               final String reason) {
+        postToMain(new Runnable() {
+            @Override
+            public void run() {
+                showFailedNotification(ctx, version, reason);
+            }
+        });
+    }
 
     /**
      * 还有没跑完的任务就别停服务。
@@ -272,14 +306,18 @@ final class GameDownloader {
         /** 版本列表给的整包大小（探测失败时当估算值用），-1 表示没有 */
         volatile long expectedTotal = -1;
 
+        /** 这个任务用几条连接（开始时从设置里取一次，中途改设置不影响它） */
+        final int threads;
+
         /** 总量是估的还是探出来的 —— 界面据此决定要不要加「约」 */
         volatile boolean totalEstimated = false;
 
         private final List<HttpURLConnection> conns =
                 java.util.Collections.synchronizedList(new ArrayList<HttpURLConnection>());
 
-        Task(String version) {
+        Task(String version, int threads) {
             this.version = version;
+            this.threads = DownloadConfig.clamp(threads);
         }
 
         void addConn(HttpURLConnection c) {
@@ -385,7 +423,7 @@ final class GameDownloader {
      */
     static Task download(final Context ctx, final String url, final String versionAll,
                          long expectedTotal, final Listener listener) {
-        final Task task = new Task(versionAll);
+        final Task task = new Task(versionAll, DownloadConfig.getThreads(ctx));
         task.url = url;
         task.expectedTotal = expectedTotal > 0 ? expectedTotal : -1;
 
@@ -417,8 +455,12 @@ final class GameDownloader {
                             task.finished = true;
                             removeIfSame(versionAll, task);
                             File out = targetFile(ctx, versionAll);
-                            showDoneNotification(ctx, versionAll, out.length());
-                            maybeStopService(ctx);
+                            // 顺序很重要：服务前台那条通知现在挂的文案是
+                            // 「正在合并文件…」。必须**先**把它撤干净，再发完成通知，
+                            // 否则两个线程抢同一个 id，很容易停在合并那条上不走。
+                            // 两次操作都投到主线程，保证先撤后发。
+                            DownloadService.stop(ctx);
+                            postDoneNotification(ctx, versionAll, out.length());
                             listener.onDone(out);
                             return;
                         }
@@ -451,8 +493,8 @@ final class GameDownloader {
                 removeIfSame(versionAll, task);
                 if (!task.paused && !task.cancelled) {
                     String msg = lastError == null ? "unknown" : lastError;
-                    showFailedNotification(ctx, versionAll, msg);
-                    maybeStopService(ctx);
+                    DownloadService.stop(ctx);
+                    postFailedNotification(ctx, versionAll, msg);
                     listener.onError(msg);
                 } else {
                     cancelNotification(ctx, versionAll);
@@ -580,7 +622,9 @@ final class GameDownloader {
             task.totalEstimated = true;
             task.lastTotal = task.expectedTotal;
         }
-        int segs = (probe.ranges && total >= SEG_MIN_TOTAL) ? SEGMENTS : 1;
+        // 用户设定的线程数；服务器不认 Range 或包太小就退回单段
+        int threads = DownloadConfig.clamp(task.threads);
+        int segs = (probe.ranges && total >= SEG_MIN_TOTAL) ? threads : 1;
 
         if (total > 0) {
             task.lastTotal = total;
@@ -614,7 +658,7 @@ final class GameDownloader {
                 // 就能直接当段 0 的起点，一个字节都不浪费；超了就只能
                 // 保持单段往下续（进度照样准，只是没并行）。
                 long have = partFile(targetFile(ctx, task.version), 0).length();
-                int want = (total >= SEG_MIN_TOTAL) ? SEGMENTS : 1;
+                int want = (total >= SEG_MIN_TOTAL) ? DownloadConfig.clamp(task.threads) : 1;
                 if (want > 1 && have > SegmentIo.spanLength(total, want, 0)) {
                     want = 1;
                 }
@@ -650,7 +694,7 @@ final class GameDownloader {
 
     private static void clearParts(Context ctx, String version) {
         File target = targetFile(ctx, version);
-        for (int i = 0; i < SEGMENTS; i++) {
+        for (int i = 0; i < MAX_SEGMENTS; i++) {
             File p = partFile(target, i);
             if (p.exists()) {
                 p.delete();
@@ -677,7 +721,7 @@ final class GameDownloader {
 
         // 这次是单段的话，之前多段留下的残片要清掉，否则进度会虚高
         if (segs == 1) {
-            for (int i = 1; i < SEGMENTS; i++) {
+            for (int i = 1; i < MAX_SEGMENTS; i++) {
                 File extra = partFile(target, i);
                 if (extra.exists()) {
                     extra.delete();

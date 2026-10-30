@@ -53,6 +53,12 @@
     <string name="msg_dl_notif_expand_hint">Expand for pause</string>
     <string name="msg_dl_notif_done">Download complete</string>
     <string name="msg_dl_notif_failed">Download failed</string>
+    <string name="title_download_threads">Download threads</string>
+    <string name="msg_download_threads_hint">More connections is not always faster — the mirror throttles. 4 is the default; 1 disables splitting.</string>
+    <string name="hint_download_threads_custom">%1$d-%2$d</string>
+    <string name="btn_threads_custom">Custom</string>
+    <string name="log_download_threads">Download threads: </string>
+    <string name="err_threads_range">Please enter a number between %1$d and %2$d</string>
     <string name="fmt_about_size">~%1$s</string>
     <string name="msg_download_threads">%1$d connections</string>
     <string name="err_version_too_old">Only Minecraft %1$s and above are supported</string>

@@ -179,6 +179,28 @@ public class DownloadService extends Service {
         });
     }
 
+    /**
+     * 只撤掉前台身份，通知留在栏里。
+     *
+     * <p>用来给「下载完成 / 失败」换文案：调用方紧接着会 notify() 同一个 id，
+     * 这时前台身份必须先摘掉，否则紧接着的 stop 会把刚换好的通知一并抹了。
+     */
+    static void detachForeground(final Context ctx) {
+        runOnMain(new Runnable() {
+            @Override
+            public void run() {
+                DownloadService s = instance;
+                if (s != null) {
+                    s.stopForegroundCompat(false);
+                    // 服务本身也收掉，别让一个空服务挂在那儿
+                    s.stopSelf();
+                } else {
+                    sendStop(ctx, ACTION_STOP_KEEP);
+                }
+            }
+        });
+    }
+
     /** 停服务并撤掉通知 */
     static void stop(final Context ctx) {
         runOnMain(new Runnable() {

@@ -661,6 +661,128 @@ public class MainActivity extends Activity {
         soGroup.check(apkProcessor.getCurrentSoType());
         container.addView(soGroup);
 
+        // ---------- 下载线程数 ----------
+        View threadsDivider = new View(this);
+        android.widget.LinearLayout.LayoutParams tdp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        tdp.topMargin = (int) (8 * density);
+        tdp.bottomMargin = (int) (14 * density);
+        threadsDivider.setLayoutParams(tdp);
+        threadsDivider.setBackgroundColor(android.graphics.Color.parseColor("#CCCCCC"));
+        container.addView(threadsDivider);
+
+        android.widget.TextView tvThreadsTitle = new android.widget.TextView(this);
+        tvThreadsTitle.setText(getString(R.string.title_download_threads));
+        tvThreadsTitle.setTextSize(16f);
+        tvThreadsTitle.setTextColor(android.graphics.Color.parseColor("#000000"));
+        tvThreadsTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvThreadsTitle.setPadding(0, 0, 0, (int) (4 * density));
+        container.addView(tvThreadsTitle);
+
+        android.widget.TextView tvThreadsHint = new android.widget.TextView(this);
+        tvThreadsHint.setText(getString(R.string.msg_download_threads_hint));
+        tvThreadsHint.setTextSize(11f);
+        tvThreadsHint.setTextColor(android.graphics.Color.parseColor("#888888"));
+        tvThreadsHint.setPadding(0, 0, 0, (int) (8 * density));
+        container.addView(tvThreadsHint);
+
+        // 预设按钮：1 / 2 / 4 / 8 / 16，最后一个是自定义。
+        // 用按钮而不是 RadioGroup：RadioGroup 得占满一整列，5 个档位竖着排
+        // 太占地方，横着排文字又会挤。
+        final int[] pickedThreads = {DownloadConfig.getThreads(this)};
+
+        final android.widget.TextView btnCustom = new android.widget.TextView(this);
+        btnCustom.setTextSize(13f);
+        btnCustom.setGravity(android.view.Gravity.CENTER);
+        btnCustom.setPadding(0, (int) (7 * density), 0, (int) (7 * density));
+        btnCustom.setBackgroundResource(R.drawable.bg_black_border);
+        btnCustom.setTextColor(android.graphics.Color.parseColor("#000000"));
+        android.widget.LinearLayout.LayoutParams clp =
+                new android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        btnCustom.setLayoutParams(clp);
+
+        final android.widget.EditText etCustom = new android.widget.EditText(this);
+        etCustom.setTextSize(13f);
+        etCustom.setSingleLine(true);
+        etCustom.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        etCustom.setHint(getString(R.string.hint_download_threads_custom,
+                DownloadConfig.MIN_THREADS, DownloadConfig.MAX_THREADS));
+        etCustom.setVisibility(View.GONE);
+        android.widget.LinearLayout.LayoutParams elp =
+                new android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        elp.leftMargin = (int) (6 * density);
+        etCustom.setLayoutParams(elp);
+
+        android.widget.LinearLayout presetRow = new android.widget.LinearLayout(this);
+        presetRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        container.addView(presetRow);
+
+        final java.util.List<android.widget.TextView> presetViews =
+                new java.util.ArrayList<android.widget.TextView>();
+
+        for (final int preset : DownloadConfig.PRESETS) {
+            android.widget.TextView btn = new android.widget.TextView(this);
+            btn.setText(String.valueOf(preset));
+            btn.setTextSize(13f);
+            btn.setGravity(android.view.Gravity.CENTER);
+            btn.setPadding(0, (int) (7 * density), 0, (int) (7 * density));
+            btn.setBackgroundResource(R.drawable.bg_black_border);
+            btn.setTextColor(android.graphics.Color.parseColor("#000000"));
+            android.widget.LinearLayout.LayoutParams lp =
+                    new android.widget.LinearLayout.LayoutParams(
+                            0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lp.rightMargin = (int) (6 * density);
+            btn.setLayoutParams(lp);
+            btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    pickedThreads[0] = preset;
+                    etCustom.setVisibility(View.GONE);
+                    refreshThreadPicks(presetViews, btnCustom, preset);
+                }
+            });
+            presetViews.add(btn);
+            presetRow.addView(btn);
+        }
+
+        // 当前值不是预设之一 -> 初始就选中「自定义」并把数字填进去
+        boolean isPreset = false;
+        for (int preset : DownloadConfig.PRESETS) {
+            if (preset == pickedThreads[0]) {
+                isPreset = true;
+                break;
+            }
+        }
+        if (!isPreset) {
+            etCustom.setText(String.valueOf(pickedThreads[0]));
+        }
+
+        btnCustom.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                etCustom.setVisibility(View.VISIBLE);
+                etCustom.requestFocus();
+                refreshThreadPicks(presetViews, btnCustom, -1);
+            }
+        });
+
+        final android.widget.LinearLayout customRow = new android.widget.LinearLayout(this);
+        customRow.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        customRow.setPadding(0, (int) (8 * density), 0, 0);
+        customRow.addView(btnCustom);
+        customRow.addView(etCustom);
+        container.addView(customRow);
+
+        if (isPreset) {
+            refreshThreadPicks(presetViews, btnCustom, pickedThreads[0]);
+        } else {
+            // 自定义值：把输入框摆出来，按钮上直接显示当前数字
+            etCustom.setVisibility(View.VISIBLE);
+            refreshThreadPicks(presetViews, btnCustom, -1);
+        }
+
         new android.app.AlertDialog.Builder(this)
                 .setTitle(getString(R.string.btn_settings))
                 .setView(scroll)
@@ -688,6 +810,29 @@ public class MainActivity extends Activity {
                         apkProcessor.saveSoConfig();
                         printLog(getString(R.string.log_switched_to)
                                 + apkProcessor.getSoDisplayName(apkProcessor.getCurrentSoType()));
+
+                        // ---- 下载线程数 ----
+                        int threads = DownloadConfig.getThreads(MainActivity.this);
+                        if (etCustom.getVisibility() == View.VISIBLE) {
+                            String typed = etCustom.getText().toString().trim();
+                            if (typed.length() > 0) {
+                                try {
+                                    threads = Integer.parseInt(typed);
+                                } catch (NumberFormatException ignore) {
+                                }
+                            }
+                        } else {
+                            threads = pickedThreads[0];
+                        }
+                        int clamped = DownloadConfig.clamp(threads);
+                        if (clamped != threads) {
+                            // 越界了要说一声，别默默改成别的数字让人以为设置没生效
+                            printLog(getString(R.string.err_threads_range,
+                                    DownloadConfig.MIN_THREADS, DownloadConfig.MAX_THREADS));
+                        }
+                        DownloadConfig.setThreads(MainActivity.this, clamped);
+                        printLog(getString(R.string.log_download_threads)
+                                + DownloadConfig.label(DownloadConfig.getThreads(MainActivity.this)));
                     }
                 })
                 .setNegativeButton(getString(R.string.btn_cancel), null)
@@ -980,6 +1125,43 @@ public class MainActivity extends Activity {
      *
      * @param outValue 回传右侧那个 TextView，方便调用方点了之后更新显示值
      */
+    /**
+     * 刷新线程预设按钮的选中外观。
+     *
+     * @param selected 选中的预设值；-1 表示选中「自定义」
+     */
+    private void refreshThreadPicks(java.util.List<android.widget.TextView> presets,
+                                    android.widget.TextView custom, int selected) {
+        int black = android.graphics.Color.parseColor("#000000");
+        int white = android.graphics.Color.WHITE;
+        int[] values = DownloadConfig.PRESETS;
+
+        for (int i = 0; i < presets.size() && i < values.length; i++) {
+            android.widget.TextView v = presets.get(i);
+            boolean on = values[i] == selected;
+            // 选中态：黑底白字，一眼看出当前用哪档；未选中回到描边样式
+            if (on) {
+                v.setBackgroundColor(black);
+                v.setTextColor(white);
+            } else {
+                v.setBackgroundResource(R.drawable.bg_black_border);
+                v.setTextColor(black);
+            }
+        }
+
+        if (custom != null) {
+            boolean on = selected < 0;
+            if (on) {
+                custom.setBackgroundColor(black);
+                custom.setTextColor(white);
+            } else {
+                custom.setBackgroundResource(R.drawable.bg_black_border);
+                custom.setTextColor(black);
+            }
+            custom.setText(getString(R.string.btn_threads_custom));
+        }
+    }
+
     private View buildSettingRow(String title, String value,
                                  android.widget.TextView[] outValue,
                                  View.OnClickListener onClick) {

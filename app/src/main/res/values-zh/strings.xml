@@ -53,6 +53,12 @@
     <string name="msg_dl_notif_expand_hint">展开可暂停</string>
     <string name="msg_dl_notif_done">下载完成</string>
     <string name="msg_dl_notif_failed">下载失败</string>
+    <string name="title_download_threads">下载线程数</string>
+    <string name="msg_download_threads_hint">连接数不是越多越快，网盘会限流。默认 4 条；填 1 表示不分段。</string>
+    <string name="hint_download_threads_custom">%1$d-%2$d</string>
+    <string name="btn_threads_custom">自定义</string>
+    <string name="log_download_threads">下载线程数: </string>
+    <string name="err_threads_range">请输入 %1$d ~ %2$d 之间的数字</string>
     <string name="fmt_about_size">约 %1$s</string>
     <string name="msg_download_threads">%1$d 个连接</string>
     <string name="err_version_too_old">只支持 Minecraft %1$s 及以上版本</string>
