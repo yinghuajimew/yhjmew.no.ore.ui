@@ -60,33 +60,16 @@
     <string name="log_download_threads">下載執行緒數: </string>
     <string name="err_threads_range">請輸入 %1$d ~ %2$d 之間的數字</string>
     <string name="title_disclaimer">使用前請先看完</string>
-    <string name="msg_disclaimer_body">本工具会把 Minecraft 安裝包拆开、改写并重新簽章，输出到原包同目錄。动手之前請先看完下面几条，看完再决定要不要繼續。
-
-一、請先備份
-- 存檔（worlds）、材質包、光影、附加包、皮肤、設定，全部建议複製一份到别的地方。改包失败、装错版本、包名冲突，都可能让游戏读不到原来的东西。
-- 特别是存檔：共存版和原版共用同一個存檔目錄，解除安裝任意一方都有可能连存檔一起清掉。
-
-二、簽章的影响
-- 如果新包用的是和原来**同一個簽章**，可以直接覆蓋安装，数据不受影响，这种情况不用太担心。
-- 如果换了簽章（比如换成 MT 默认簽章、zihao_il 簽章或你自己的 bks），系统会当成另一個應用程式，**必须先解除安裝原版才能装**，而解除安裝会把應用程式数据一起删掉。
-- 所以：要换簽章，請先備份，或者直接用「共存处理」改成另一個包名，这样兩個版本能同时存在。
-
-三、共存模式
-- 共存版只改包名，不改存檔路径，因此会和原版共用同一個存檔目錄。
-- 兩個版本同时執行、同时写同一個存檔，可能互相覆蓋。建议一次只开一個。
-
-四、其他
-- 这是非官方工具，与 Mojang、微软没有任何关系。因为使用本工具导致的存檔损坏、数据丢失、账号异常或裝置問題，需要自行承担。
-- 游戏更新之后，旧的补丁可能失效，請等下个版本的特征码。
-- 請不要把本工具修改过的包当作官方版本分发或用于商业用途。
-
-點「確定」表示你已经閱讀并理解以上内容。</string>
+    <string name="msg_disclaimer_body">本工具会拆开、改写并重新簽章 Minecraft 安裝包，输出到原包同目錄。开始前請看完下面几条。\n\n① 先备份\n存檔、材質、光影、附加包、皮肤、設定，建议都複製一份到別處。\n共存版和原版共用同一个存檔目錄，解除安裝任意一方都可能连存檔一起清掉。\n\n② 簽章决定能不能直接覆蓋安装\n换簽章后系统会当成另一个應用程式，必须先解除安裝原版才能装，而解除安裝会删掉應用程式数据。\n用「共存处理」改成另一个包名，两个版本就能同时存在，不必解除安裝。\n\n③ 同时开两个版本时\n两边写的是同一个存檔，可能互相覆蓋。建议一次只开一个。\n\n④ 其他\n非官方工具，与 Mojang、微软无关。因使用本工具造成的存檔損壞、数据丢失、账号异常或裝置问题，請自行承担。\n游戏更新后补丁可能失效，需等待新版本的特征码。\n請勿把改过的包当作官方版本分发，或用于商業用途。\n\n點「確定」表示你已閱讀并理解以上内容。</string>
     <string name="msg_disclaimer_countdown">請先閱讀上面的說明，%1$d 秒後才能繼續</string>
     <string name="msg_disclaimer_ready">現在可以繼續了</string>
     <string name="btn_agree_continue">確定</string>
     <string name="btn_dont_show_again">不再顯示</string>
     <string name="msg_never_show_short">已隱藏</string>
     <string name="msg_always_show_short">會顯示</string>
+    <string name="btn_sign_custom_pick">自訂簽章（.bks）— 點擊選擇檔案</string>
+    <string name="btn_sign_custom_current">自訂簽章：%1$s — 點擊切換</string>
+    <string name="btn_sign_custom_switch">使用自訂簽章：%1$s</string>
     <string name="title_disclaimer_reset">重新顯示提示</string>
     <string name="msg_disclaimer_reset_done">下次使用時會再提示一次</string>
     <string name="fmt_about_size">約 %1$s</string>

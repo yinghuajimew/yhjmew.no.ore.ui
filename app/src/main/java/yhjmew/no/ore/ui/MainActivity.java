@@ -329,6 +329,14 @@ public class MainActivity extends Activity {
                     }
                 }
 
+                // 选完文件：立刻设为当前签名，并弹出别名/密码那一步。
+                // 原来这里只弹对话框、没 setCurrentSignType，
+                // 用户以为已经切过去了，其实签名类型还是旧的。
+                signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
+                signatureManager.saveSignConfig();
+                printLog(getString(R.string.log_switched_to)
+                        + signatureManager.getSignDisplayName(
+                        signatureManager.getCurrentSignType()));
                 showCustomSignInputDialog(signatureManager.getCustomSignFilePath());
             }
             return;
@@ -621,11 +629,14 @@ public class MainActivity extends Activity {
         tvSignTitle.setPadding(0, 0, 0, (int) (8 * density));
         container.addView(tvSignTitle);
 
+        // 前两项是单选（都是内置签名，选完就生效）；
+        // 「自定义」是**按钮**，点下去立刻弹文件选择器。
+        // 原来三项都是单选，选了自定义还得再点一次「确定」才会跳 ——
+        // 用户点了没反应，就以为功能坏了。
         final android.widget.RadioGroup signGroup = new android.widget.RadioGroup(this);
         String[] signNames = new String[]{
                 getString(R.string.btn_sign_mt_default),
-                getString(R.string.btn_sign_zihao_il),
-                getString(R.string.btn_sign_custom_bks)
+                getString(R.string.btn_sign_zihao_il)
         };
         for (int i = 0; i < signNames.length; i++) {
             android.widget.RadioButton rb = new android.widget.RadioButton(this);
@@ -633,12 +644,79 @@ public class MainActivity extends Activity {
             rb.setId(i);
             signGroup.addView(rb);
         }
-        if (signatureManager.getCurrentSignType() < 3) {
-            signGroup.check(signatureManager.getCurrentSignType());
-        } else {
-            signGroup.check(2);
-        }
         container.addView(signGroup);
+
+        // 自定义签名：显示当前选中的 .bks 路径（没有就显示提示文案）
+        final android.widget.TextView tvCustomSign = new android.widget.TextView(this);
+        tvCustomSign.setTextSize(13f);
+        tvCustomSign.setGravity(android.view.Gravity.CENTER);
+        tvCustomSign.setPadding((int) (10 * density), (int) (8 * density),
+                (int) (10 * density), (int) (8 * density));
+        tvCustomSign.setBackgroundResource(R.drawable.bg_black_border);
+        android.widget.LinearLayout.LayoutParams signBtnLp =
+                new android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        signBtnLp.topMargin = (int) (6 * density);
+        tvCustomSign.setLayoutParams(signBtnLp);
+        container.addView(tvCustomSign);
+
+        final Runnable refreshCustomSignLabel = new Runnable() {
+            @Override
+            public void run() {
+                String path = signatureManager.getCustomSignFilePath();
+                boolean has = path != null && path.length() > 0;
+                boolean active = signatureManager.getCurrentSignType()
+                        == SignatureManager.SIGN_TYPE_CUSTOM;
+                tvCustomSign.setText(has
+                        ? getString(active
+                        ? R.string.btn_sign_custom_current
+                        : R.string.btn_sign_custom_switch, absName(path))
+                        : getString(R.string.btn_sign_custom_pick));
+                if (active && has) {
+                    // 当前生效：黑底白字，和线程预设的选中态一致
+                    tvCustomSign.setBackgroundColor(
+                            android.graphics.Color.parseColor("#000000"));
+                    tvCustomSign.setTextColor(android.graphics.Color.WHITE);
+                } else {
+                    tvCustomSign.setBackgroundResource(R.drawable.bg_black_border);
+                    tvCustomSign.setTextColor(android.graphics.Color.parseColor("#000000"));
+                }
+            }
+        };
+
+        tvCustomSign.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 已经选过就直接切过去，不用再挑一遍文件
+                String path = signatureManager.getCustomSignFilePath();
+                if (path != null && path.length() > 0) {
+                    signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
+                    signatureManager.saveSignConfig();
+                    signGroup.clearCheck();
+                    refreshCustomSignLabel.run();
+                    printLog(getString(R.string.log_switched_to)
+                            + signatureManager.getSignDisplayName(
+                            signatureManager.getCurrentSignType()));
+                    // 想换一个文件？长按可以重选
+                    return;
+                }
+                openSignFilePicker();
+            }
+        });
+        tvCustomSign.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                // 长按总是重新选文件，方便换一个签名
+                openSignFilePicker();
+                return true;
+            }
+        });
+
+        if (signatureManager.getCurrentSignType() < 2) {
+            signGroup.check(signatureManager.getCurrentSignType());
+        }
+        refreshCustomSignLabel.run();
 
         // 自定义签名当前路径，选第三项时给个提示
         final String customPath = signatureManager.getCustomSignFilePath();
@@ -844,17 +922,15 @@ public class MainActivity extends Activity {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         // ---- 签名 ----
+                        // 自定义那一项已经是按钮了，点它就即时生效；
+                        // 这里只处理两个内置签名。选中「自定义」时 signGroup 是空的，
+                        // getCheckedRadioButtonId() 返回 -1，什么都不做即可。
                         int selectedSign = signGroup.getCheckedRadioButtonId();
-                        if (selectedSign == 2) {
-                            if (signatureManager.getCustomSignFilePath() != null
-                                    && signatureManager.getCustomSignFilePath().length() > 0) {
-                                signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
-                            }
-                            openSignFilePicker();
-                        } else {
+                        if (selectedSign >= 0) {
                             signatureManager.setCurrentSignType(selectedSign);
                             printLog(getString(R.string.log_switched_to)
-                                    + signatureManager.getSignDisplayName(signatureManager.getCurrentSignType()));
+                                    + signatureManager.getSignDisplayName(
+                                    signatureManager.getCurrentSignType()));
                         }
                         signatureManager.saveSignConfig();
 
@@ -1211,6 +1287,15 @@ public class MainActivity extends Activity {
      *
      * @param outValue 回传右侧那个 TextView，方便调用方点了之后更新显示值
      */
+    /** 路径末段，界面上只显示文件名就够了 */
+    private static String absName(String path) {
+        if (path == null) {
+            return "";
+        }
+        int i = path.lastIndexOf('/');
+        return i >= 0 && i + 1 < path.length() ? path.substring(i + 1) : path;
+    }
+
     /**
      * 刷新线程预设按钮的选中外观。
      *
