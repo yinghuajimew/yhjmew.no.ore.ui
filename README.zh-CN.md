@@ -124,11 +124,11 @@ Minecraft 基岩版从 1.21 起换上了新的界面层 **oreUI**。有些设备
 
 <div align="center">
   <br/>
-  <img src="./Screenshots/home.png" width="80%" alt="主界面">
+  <img src="./Screenshots/zh/home.png" width="80%" alt="主界面">
   <br/>
-  <img src="./Screenshots/downloads.png" width="80%" alt="下载列表">
+  <img src="./Screenshots/zh/downloads.png" width="80%" alt="下载列表">
   <br/>
-  <img src="./Screenshots/settings.png" width="80%" alt="设置">
+  <img src="./Screenshots/zh/settings.png" width="80%" alt="设置">
   <br/>
 </div>
 
@@ -185,7 +185,7 @@ Minecraft 基岩版从 1.21 起换上了新的界面层 **oreUI**。有些设备
 [license-link]: ./LICENSE
 
 [bilibili-shield]: https://img.shields.io/badge/Bilibili-FB7299?style=flat-square&labelColor=black&logo=bilibili&logoColor=white
-[bilibili-link]: https://space.bilibili.com/
+[bilibili-link]: https://www.bilibili.com/video/BV1yJdQBdExJ
 
 [qq-shield]: https://img.shields.io/badge/QQ_group-12B7F5?style=flat-square&labelColor=black&logo=qq&logoColor=white
 [qq-link]: https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&group_code=127681066

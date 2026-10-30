@@ -59,6 +59,36 @@
     <string name="btn_threads_custom">Custom</string>
     <string name="log_download_threads">Download threads: </string>
     <string name="err_threads_range">Please enter a number between %1$d and %2$d</string>
+    <string name="title_disclaimer">Before you continue</string>
+    <string name="msg_disclaimer_body">This tool unpacks a Minecraft installation package, rewrites it and signs it again, then writes the result next to the original file. Please read the following before you continue.
+
+1. Back up first
+- Worlds, resource packs, shaders, add-ons, skins and settings: copy them somewhere else. A failed repack, the wrong version, or a package name clash can all leave the game unable to read what was there before.
+- Worlds especially: a coexistence build shares the same world folder as the original, and uninstalling either one can take the worlds with it.
+
+2. About signatures
+- If the new package uses the **same signature** as the original, it installs straight over the top and your data is untouched. Nothing to worry about in that case.
+- If the signature changes (MT default, zihao_il, or your own .bks), Android treats it as a different app. You **must uninstall the original first**, and uninstalling deletes the app data.
+- So: back up before changing the signature, or use **Coexistence processing** instead — it renames the package so both builds can live side by side.
+
+3. Coexistence mode
+- It only changes the package name, not the world path, so both builds share one world folder.
+- Running both at the same time and writing to the same world can overwrite each other. Keep one open at a time.
+
+4. Everything else
+- This is an unofficial tool. It has no affiliation with Mojang or Microsoft. You accept the risk of corrupted worlds, lost data, account issues or device problems caused by using it.
+- After a game update the patch may stop working until a matching signature ships.
+- Do not redistribute the patched package as an official build, and do not sell it.
+
+Tapping **OK** means you have read and understood the above.</string>
+    <string name="msg_disclaimer_countdown">Please read the notice above. You can continue in %1$d s</string>
+    <string name="msg_disclaimer_ready">You can continue now</string>
+    <string name="btn_agree_continue">OK</string>
+    <string name="btn_dont_show_again">Don't show this again</string>
+    <string name="msg_never_show_short">Hidden</string>
+    <string name="msg_always_show_short">Shown</string>
+    <string name="title_disclaimer_reset">Show notice again</string>
+    <string name="msg_disclaimer_reset_done">The notice will be shown next time</string>
     <string name="fmt_about_size">~%1$s</string>
     <string name="msg_download_threads">%1$d connections</string>
     <string name="err_version_too_old">Only Minecraft %1$s and above are supported</string>
@@ -158,7 +188,7 @@
     <string name="msg_so_standalone">Standalone SO</string>
     <string name="msg_so_preloader">Dependent Version SO</string>
     <string name="msg_so_standalone_desc">Standalone version (does not require libpreloader.so) available for Android 11 and later, supports 1.21 and later versions</string>
-    <string name="msg_so_preloader_desc">Dependent version (requires libpreloader.so) available for all Android versions, only version 1.26 is supported.</string>
+    <string name="msg_so_preloader_desc">Dependent version (requires libpreloader.so), works on all Android versions, supports 1.21 and later</string>
     <string name="msg_update_content">Updated:\n</string>
 
     <!-- ==================== 输入提示 ==================== -->

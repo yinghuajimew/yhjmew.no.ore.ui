@@ -115,20 +115,14 @@ public class MainActivity extends Activity {
         btnSelectMc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (checkAndRequestPermissions()) {
-                    currentPickMode = PICK_MODE_NORMAL;
-                    openFilePicker();
-                }
+                startWithDisclaimer(PICK_MODE_NORMAL);
             }
         });
 
         btnMakeClone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (checkAndRequestPermissions()) {
-                    currentPickMode = PICK_MODE_CLONE;
-                    openFilePicker();
-                }
+                startWithDisclaimer(PICK_MODE_CLONE);
             }
         });
 
@@ -294,9 +288,15 @@ public class MainActivity extends Activity {
                 Uri signUri = data.getData();
                 String fileName = getFileNameFromUri(signUri);
 
-                if (fileName != null && !fileName.toLowerCase(Locale.getDefault()).endsWith(".bks")) {
+                String lower = fileName == null ? "" : fileName.toLowerCase(Locale.getDefault());
+                if (!lower.endsWith(".bks")) {
+                    // 只提示名字是干嘛的，别一句话把人劝回去 —— 用户可能选的是
+                    // .keystore / 无后缀的密钥库，下面还有别名密码那一步兜底
                     printLog(getString(R.string.err_sign_need_bks) + fileName);
-                    return;
+                    if (!lower.endsWith(".keystore") && !lower.endsWith(".jks")
+                            && !lower.endsWith(".p12") && !lower.endsWith(".pfx")) {
+                        return;
+                    }
                 }
 
                 printLog(getString(R.string.log_sign_file_selected) + fileName);
@@ -396,15 +396,19 @@ public class MainActivity extends Activity {
             showToast(getString(R.string.err_apk_missing));
             return;
         }
-        // 先确认存储权限（写输出目录需要）。没权限时这里会拉起授权页，
-        // 回来之后用户再点一次「处理」即可。
-        if (!checkAndRequestPermissions()) {
-            return;
-        }
 
-        final Uri uri = Uri.fromFile(apkFile);
-        resolveOriginalFileInfo(uri);
-        prepareAndProcess(uri, cloneMode ? PICK_MODE_CLONE : PICK_MODE_NORMAL);
+        // 从下载页点「处理」也是一键打包，同样要先过免责说明
+        DisclaimerDialog.showIfNeeded(this, new Runnable() {
+            @Override
+            public void run() {
+                if (!ensureStoragePermission()) {
+                    return;
+                }
+                final Uri uri = Uri.fromFile(apkFile);
+                resolveOriginalFileInfo(uri);
+                prepareAndProcess(uri, cloneMode ? PICK_MODE_CLONE : PICK_MODE_NORMAL);
+            }
+        });
     }
 
     private String getFileNameFromUri(Uri uri) {
@@ -460,6 +464,26 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    /**
+     * 处理入口：免责说明 → 权限 → 选文件。
+     *
+     * <p>顺序是刻意的。说明放最前面，用户还没进入任何流程，
+     * 这时候取消成本最低；反过来先让他选完几百 MB 的包再弹免责，
+     * 他只会不耐烦地点确定。
+     */
+    private void startWithDisclaimer(final int pickMode) {
+        DisclaimerDialog.showIfNeeded(this, new Runnable() {
+            @Override
+            public void run() {
+                if (!checkAndRequestPermissions()) {
+                    return;
+                }
+                currentPickMode = pickMode;
+                openFilePicker();
+            }
+        });
     }
 
     /**
@@ -783,6 +807,36 @@ public class MainActivity extends Activity {
             refreshThreadPicks(presetViews, btnCustom, -1);
         }
 
+        // ---------- 免责说明 ----------
+        View discDivider = new View(this);
+        android.widget.LinearLayout.LayoutParams ddp = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        ddp.topMargin = (int) (8 * density);
+        ddp.bottomMargin = (int) (6 * density);
+        discDivider.setLayoutParams(ddp);
+        discDivider.setBackgroundColor(android.graphics.Color.parseColor("#CCCCCC"));
+        container.addView(discDivider);
+
+        // 点一下重新看一遍说明。这个入口让"我明明点过不再显示，但想再看"有地方去，
+        // 也方便出问题时向别人展示这份提示。
+        container.addView(buildSettingRow(
+                getString(R.string.title_disclaimer_reset),
+                DisclaimerDialog.isAccepted(this)
+                        ? getString(R.string.msg_never_show_short)
+                        : getString(R.string.msg_always_show_short),
+                null,
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        DisclaimerDialog.show(MainActivity.this, new Runnable() {
+                            @Override
+                            public void run() {
+                                printLog(getString(R.string.msg_disclaimer_reset_done));
+                            }
+                        });
+                    }
+                }));
+
         new android.app.AlertDialog.Builder(this)
                 .setTitle(getString(R.string.btn_settings))
                 .setView(scroll)
@@ -839,13 +893,45 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    /**
+     * 让用户自己挑一个 .bks 签名文件。
+     *
+     * <p>原来写的是 {@code setType("application/octet-stream")} —— 很多机型
+     * （尤其是 Android 11+ 的 DocumentsUI）对具体 MIME 会把文件全过滤掉，
+     * 表现就是点了没反应、或者打开一个空列表。
+     * .bks 本身没有注册 MIME，系统只能猜，猜不出来就干脆一条都不显示。
+     *
+     * <p>所以改成通配类型，再把 .bks / .keystore 这些常见类型放进 EXTRA_MIME_TYPES
+     * 让它们排在前面；选完仍然校验后缀，避免用户误选。
+     */
     private void openSignFilePicker() {
         printLog(getString(R.string.log_opening_sign_picker));
+
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("application/octet-stream");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
+        // */* 是必须的：只给具体 MIME 时，没匹配到类型的文件会被整个列表过滤掉
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                "application/octet-stream",
+                "application/x-bks",
+                "application/ks",
+                "application/x-keystore",
+                "application/pkcs12",
+                "application/x-pkcs12"
+        });
+
         try {
             startActivityForResult(intent, REQUEST_CODE_SELECT_SIGN_FILE);
+        } catch (android.content.ActivityNotFoundException e) {
+            // 有些精简 ROM 没有 DocumentsUI，退到 ACTION_OPEN_DOCUMENT（SAF）
+            try {
+                Intent saf = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                saf.addCategory(Intent.CATEGORY_OPENABLE);
+                saf.setType("*/*");
+                startActivityForResult(saf, REQUEST_CODE_SELECT_SIGN_FILE);
+            } catch (Exception e2) {
+                printLog(getString(R.string.err_open_fm_failed) + Utils.getFullStackTrace(e2));
+            }
         } catch (Exception e) {
             printLog(getString(R.string.err_open_fm_failed) + Utils.getFullStackTrace(e));
         }

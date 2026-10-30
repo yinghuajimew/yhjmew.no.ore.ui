@@ -59,6 +59,36 @@
     <string name="btn_threads_custom">自訂</string>
     <string name="log_download_threads">下載線程數: </string>
     <string name="err_threads_range">請輸入 %1$d ~ %2$d 之間的數字</string>
+    <string name="title_disclaimer">使用前請先看完</string>
+    <string name="msg_disclaimer_body">本工具会把 Minecraft 安裝包拆开、改写并重新簽名，输出到原包同目录。动手之前請先看完下面几条，看完再决定要不要繼續。
+
+一、請先備份
+- 存檔（worlds）、材质包、光影、附加包、皮肤、設定，全部建议複製一份到别的地方。改包失败、装错版本、包名冲突，都可能让游戏读不到原来的东西。
+- 特别是存檔：共存版和原版共用同一个存檔目录，卸載任意一方都有可能连存檔一起清掉。
+
+二、簽名的影响
+- 如果新包用的是和原来**同一个簽名**，可以直接覆盖安装，数据不受影响，这种情况不用太担心。
+- 如果换了簽名（比如换成 MT 默认簽名、zihao_il 簽名或你自己的 bks），系统会当成另一个應用程式，**必须先卸載原版才能装**，而卸載会把應用程式数据一起删掉。
+- 所以：要换簽名，請先備份，或者直接用「共存处理」改成另一个包名，这样两个版本能同时存在。
+
+三、共存模式
+- 共存版只改包名，不改存檔路径，因此会和原版共用同一个存檔目录。
+- 两个版本同时運行、同时写同一个存檔，可能互相覆盖。建议一次只开一个。
+
+四、其他
+- 这是非官方工具，与 Mojang、微软没有任何关系。因为使用本工具导致的存檔损坏、数据丢失、账号异常或裝置问题，需要自行承担。
+- 游戏更新之后，旧的补丁可能失效，請等下个版本的特征码。
+- 請不要把本工具修改过的包当作官方版本分发或用于商业用途。
+
+點「確定」表示你已经閱讀并理解以上内容。</string>
+    <string name="msg_disclaimer_countdown">請先閱讀上面的說明，%1$d 秒後才能繼續</string>
+    <string name="msg_disclaimer_ready">現在可以繼續了</string>
+    <string name="btn_agree_continue">確定</string>
+    <string name="btn_dont_show_again">不再顯示</string>
+    <string name="msg_never_show_short">已隱藏</string>
+    <string name="msg_always_show_short">會顯示</string>
+    <string name="title_disclaimer_reset">重新顯示提示</string>
+    <string name="msg_disclaimer_reset_done">下次使用時會再提示一次</string>
     <string name="fmt_about_size">約 %1$s</string>
     <string name="msg_download_threads">%1$d 條連線</string>
     <string name="err_version_too_old">只支持 Minecraft %1$s 及以上版本</string>
@@ -168,7 +198,7 @@
     <string name="msg_so_standalone">獨立版 SO</string>
     <string name="msg_so_preloader">依賴版 SO</string>
     <string name="msg_so_standalone_desc">獨立版（不需要 libpreloader.so）安卓11級以後可用，支持1.21及以後版本</string>
-    <string name="msg_so_preloader_desc">依賴版（需要 libpreloader.so）所有安卓版本可用，僅支持1.26版本</string>
+    <string name="msg_so_preloader_desc">依賴版（需要 libpreloader.so）所有安卓版本可用，支援 1.21 及以後版本</string>
     <string name="msg_update_content">更新內容:
 </string>
 

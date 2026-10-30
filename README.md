@@ -129,11 +129,11 @@ Progress is shown in the app **and** in a notification you can expand to pause o
 
 <div align="center">
   <br/>
-  <img src="./Screenshots/home.png" width="80%" alt="Home">
+  <img src="./Screenshots/en/home.png" width="80%" alt="Home">
   <br/>
-  <img src="./Screenshots/downloads.png" width="80%" alt="Download list">
+  <img src="./Screenshots/en/downloads.png" width="80%" alt="Download list">
   <br/>
-  <img src="./Screenshots/settings.png" width="80%" alt="Settings">
+  <img src="./Screenshots/en/settings.png" width="80%" alt="Settings">
   <br/>
 </div>
 
@@ -191,7 +191,7 @@ reference and the version mirror<br/>
 [license-link]: ./LICENSE
 
 [bilibili-shield]: https://img.shields.io/badge/Bilibili-FB7299?style=flat-square&labelColor=black&logo=bilibili&logoColor=white
-[bilibili-link]: https://space.bilibili.com/
+[bilibili-link]: https://www.bilibili.com/video/BV1yJdQBdExJ
 
 [qq-shield]: https://img.shields.io/badge/QQ_group-12B7F5?style=flat-square&labelColor=black&logo=qq&logoColor=white
 [qq-link]: https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&group_code=127681066
