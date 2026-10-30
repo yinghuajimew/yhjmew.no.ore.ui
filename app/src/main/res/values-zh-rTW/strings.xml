@@ -53,12 +53,14 @@
     <string name="msg_dl_notif_expand_hint">展開可暫停</string>
     <string name="msg_dl_notif_done">下載完成</string>
     <string name="msg_dl_notif_failed">下載失敗</string>
+    <string name="fmt_about_size">約 %1$s</string>
     <string name="msg_download_threads">%1$d 條連線</string>
     <string name="err_version_too_old">只支持 Minecraft %1$s 及以上版本</string>
     <string name="err_no_download_link">没有下载链接</string>
     <string name="err_no_onedrive_link_hint">该版本没有 OneDrive 镜像。应用内只能走 OneDrive，其余网盘需登录或只能在各自 App 内下载。</string>
     <string name="err_resume_lookup">获取版本信息失败，无法继续下载</string>
     <string name="log_dl_resume_from">从断点继续: </string>
+    <string name="log_dl_size_found">已確定大小: %1$s</string>
     <string name="log_dl_no_resume">服务器不支持续传，重新下载</string>
     <string name="err_dl_incomplete">下载不完整: </string>
     <string name="btn_download_later">稍後提醒</string>

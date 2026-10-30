@@ -143,8 +143,16 @@ final class DownloadManagerDialog {
 
     /** 打开下载页并立刻开始下载（从版本列表点进来时用） */
     void showAndDownload(final String versionAll, final String directUrl) {
+        showAndDownload(versionAll, directUrl, -1);
+    }
+
+    /**
+     * @param expectedTotal 版本列表给的整包大小；探测拿不到总长时拿它顶着，
+     *                      百分比才有得算
+     */
+    void showAndDownload(final String versionAll, final String directUrl, long expectedTotal) {
         show();
-        startDownload(versionAll, directUrl);
+        startDownload(versionAll, directUrl, expectedTotal);
     }
 
     void refresh() {
@@ -262,7 +270,11 @@ final class DownloadManagerDialog {
             long total = t.lastTotal;
             long done = t.lastDownloaded;
             if (total > 0) {
-                size = GameDownloader.fmt(done) + " / " + GameDownloader.fmt(total);
+                // 总量是估出来的就加个「约」，免得下完时显示 763/722MB 让人以为坏了
+                size = GameDownloader.fmt(done) + " / "
+                        + (t.totalEstimated
+                        ? activity.getString(R.string.fmt_about_size, GameDownloader.fmt(total))
+                        : GameDownloader.fmt(total));
             } else {
                 size = GameDownloader.fmt(done);
             }
@@ -574,7 +586,10 @@ final class DownloadManagerDialog {
             }
         }
 
-        VersionRepo.searchOfficial(version, false, new VersionRepo.Callback() {
+        // 必须用 findExact：searchOfficial 的第一个候选是模糊的 "26."，
+        // 返回整个大版本，"取第 0 条"会拿到最新的 1.26.60.4 ——
+        // 那样等于给 1.26.52.3 续传一份 1.26.60.4 的包。
+        VersionRepo.findExact(version, new VersionRepo.Callback() {
             @Override
             public void onResult(List<VersionRepo.Entry> entries, String error) {
                 if (error != null || entries.isEmpty()) {
@@ -595,7 +610,8 @@ final class DownloadManagerDialog {
                             activity.runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    startDownload(e.versionAll, direct);
+                                    startDownload(e.versionAll, direct,
+                                            e.estimatedTotalBytes());
                                 }
                             });
                         } catch (Exception ex) {
@@ -674,14 +690,22 @@ final class DownloadManagerDialog {
 
     /** 真正开始下载 */
     void startDownload(final String versionAll, final String directUrl) {
+        startDownload(versionAll, directUrl, -1);
+    }
+
+    void startDownload(final String versionAll, final String directUrl, long expectedTotal) {
         // 已有同名任务在跑就不重复开
         GameDownloader.Task exist = GameDownloader.taskOf(versionAll);
         if (exist != null && !exist.finished) {
             refresh();
             return;
         }
+        // 续传时没有 API 数据，沿用上一次记下的估值，别把总量弄丢
+        if (expectedTotal <= 0 && exist != null && exist.expectedTotal > 0) {
+            expectedTotal = exist.expectedTotal;
+        }
 
-        GameDownloader.download(activity, directUrl, versionAll,
+        GameDownloader.download(activity, directUrl, versionAll, expectedTotal,
                 new GameDownloader.Listener() {
                     @Override
                     public void onProgress(long downloaded, long total) {

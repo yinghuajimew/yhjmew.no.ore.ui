@@ -53,12 +53,14 @@
     <string name="msg_dl_notif_expand_hint">Expand for pause</string>
     <string name="msg_dl_notif_done">Download complete</string>
     <string name="msg_dl_notif_failed">Download failed</string>
+    <string name="fmt_about_size">~%1$s</string>
     <string name="msg_download_threads">%1$d connections</string>
     <string name="err_version_too_old">Only Minecraft %1$s and above are supported</string>
     <string name="err_no_download_link">No download link</string>
     <string name="err_no_onedrive_link_hint">This version has no OneDrive mirror. Only OneDrive is usable inside the app.</string>
     <string name="err_resume_lookup">Could not fetch version info, cannot resume</string>
     <string name="log_dl_resume_from">Resuming from </string>
+    <string name="log_dl_size_found">Found size: %1$s</string>
     <string name="log_dl_no_resume">Server does not support resume, restarting</string>
     <string name="err_dl_incomplete">Incomplete download: </string>
     <string name="btn_download_later">Reminder later</string>

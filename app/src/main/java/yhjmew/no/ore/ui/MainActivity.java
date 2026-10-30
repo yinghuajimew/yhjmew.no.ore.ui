@@ -559,7 +559,8 @@ public class MainActivity extends Activity {
                                 public void run() {
                                     // 先弹出下载页再开始，否则 refresh() 时 list 还是 null
                                     new DownloadManagerDialog(MainActivity.this)
-                                            .showAndDownload(entry.versionAll, direct);
+                                            .showAndDownload(entry.versionAll, direct,
+                                                    entry.estimatedTotalBytes());
                                 }
                             });
                         } catch (Exception e) {

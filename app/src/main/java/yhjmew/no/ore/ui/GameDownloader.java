@@ -269,6 +269,12 @@ final class GameDownloader {
         /** 本次实际开了几段（服务器不认 Range 时是 1） */
         volatile int segments = 1;
 
+        /** 版本列表给的整包大小（探测失败时当估算值用），-1 表示没有 */
+        volatile long expectedTotal = -1;
+
+        /** 总量是估的还是探出来的 —— 界面据此决定要不要加「约」 */
+        volatile boolean totalEstimated = false;
+
         private final List<HttpURLConnection> conns =
                 java.util.Collections.synchronizedList(new ArrayList<HttpURLConnection>());
 
@@ -369,8 +375,19 @@ final class GameDownloader {
      */
     static Task download(final Context ctx, final String url, final String versionAll,
                          final Listener listener) {
+        return download(ctx, url, versionAll, -1, listener);
+    }
+
+    /**
+     * @param expectedTotal 版本列表里给的整包大小。探测拿不到 Content-Length 时
+     *                      先拿它顶着，百分比才有得算；真下起来拿到
+     *                      Content-Range 就换成真值。
+     */
+    static Task download(final Context ctx, final String url, final String versionAll,
+                         long expectedTotal, final Listener listener) {
         final Task task = new Task(versionAll);
         task.url = url;
+        task.expectedTotal = expectedTotal > 0 ? expectedTotal : -1;
 
         final Task prev = RUNNING.put(versionAll, task);
         createChannel(ctx);
@@ -529,54 +546,45 @@ final class GameDownloader {
 
     // ---------------- 下载本体 ----------------
 
-    private static final class Probe {
-        long total = -1;
-        boolean ranges;
-    }
-
-    /** 先花一次请求问清楚：总长多少、认不认 Range */
-    private static Probe probe(Task task) {
-        Probe p = new Probe();
-        HttpURLConnection conn = null;
-        try {
-            conn = (HttpURLConnection) new URL(task.url).openConnection();
-            task.addConn(conn);
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(20000);
-            conn.setRequestProperty("User-Agent", UA);
-            conn.setRequestProperty("Accept", "*/*");
-            conn.setRequestProperty("Accept-Encoding", "identity");
-            conn.setRequestProperty("Range", "bytes=0-0");
-            int code = conn.getResponseCode();
-            if (code == 206) {
-                p.ranges = true;
-                p.total = SegmentIo.parseContentRangeTotal(conn.getHeaderField("Content-Range"));
-            } else if (code == HttpURLConnection.HTTP_OK) {
-                p.ranges = false;
-                p.total = conn.getContentLength();
-            }
-        } catch (Exception ignore) {
-        } finally {
-            if (conn != null) {
-                task.removeConn(conn);
-                try {
-                    conn.disconnect();
-                } catch (Exception ignore) {
-                }
-            }
-        }
-        return p;
-    }
-
     /**
      * 一轮完整尝试。
      *
      * @return true 表示整包已经拼好；false 表示被暂停/取消
      */
+    private static SegmentIo.Probe probe(Task task) {
+        return SegmentIo.probe(task.url, UA, new SegmentIo.ConnHook() {
+            @Override
+            public void onOpen(HttpURLConnection conn) {
+                task.addConn(conn);
+            }
+
+            @Override
+            public void onClose(HttpURLConnection conn) {
+                task.removeConn(conn);
+            }
+        }, new SegmentIo.CancelCheck() {
+            @Override
+            public boolean cancelled() {
+                return task.cancelled || task.paused;
+            }
+        });
+    }
+
     private static boolean runOnce(Context ctx, Task task, Listener listener) throws Exception {
-        Probe probe = probe(task);
+        SegmentIo.Probe probe = probe(task);
         long total = probe.total;
+
+        // 探测失败（多半是被限流打掉）：版本列表里的大小先拿来当"估算总量"，
+        // 只用于显示 —— **不能**拿它去切分段，切错了就下不完。
+        if (total <= 0 && task.expectedTotal > 0) {
+            task.totalEstimated = true;
+            task.lastTotal = task.expectedTotal;
+        }
         int segs = (probe.ranges && total >= SEG_MIN_TOTAL) ? SEGMENTS : 1;
+
+        if (total > 0) {
+            task.lastTotal = total;
+        }
 
         while (true) {
             try {
@@ -593,6 +601,24 @@ final class GameDownloader {
                 clearParts(ctx, task.version);
                 segs = 1;
                 total = probe.total;
+            } catch (SegmentIo.SizeDiscovered sd) {
+                // 一开始不知道总长，下的过程中从 Content-Range 里补到了。
+                // 那一刻分段的划分是按"未知"算的（只有一段），所以要按真实
+                // 长度重划 —— 重划之后每段各续各的，已经下的字节不会浪费。
+                total = sd.total;
+                task.totalEstimated = false;
+                listener.onLog(ctx.getString(R.string.log_dl_size_found,
+                        GameDownloader.fmt(total)));
+
+                // 已经落盘的 part0 是整包的前缀：只要没超过第一段的长度，
+                // 就能直接当段 0 的起点，一个字节都不浪费；超了就只能
+                // 保持单段往下续（进度照样准，只是没并行）。
+                long have = partFile(targetFile(ctx, task.version), 0).length();
+                int want = (total >= SEG_MIN_TOTAL) ? SEGMENTS : 1;
+                if (want > 1 && have > SegmentIo.spanLength(total, want, 0)) {
+                    want = 1;
+                }
+                segs = want;
             }
         }
 
@@ -604,7 +630,9 @@ final class GameDownloader {
         for (int i = 0; i < segs; i++) {
             parts[i] = partFile(target, i);
         }
-        task.lastTotal = total > 0 ? total : 0;
+        if (total > 0) {
+            task.lastTotal = total;
+        }
         showMergingNotification(ctx, task.version, 0);
         try {
             if (!mergeParts(ctx, task, target, parts, total)) {
@@ -616,6 +644,7 @@ final class GameDownloader {
             throw e;
         }
         task.lastDownloaded = total > 0 ? total : task.lastDownloaded;
+        task.totalEstimated = false;
         return true;
     }
 
@@ -671,6 +700,7 @@ final class GameDownloader {
 
         final AtomicReference<Exception> err = new AtomicReference<Exception>();
         final AtomicBoolean stop = new AtomicBoolean(false);
+        final AtomicReference<Long> found = new AtomicReference<Long>();
         final CountDownLatch latch = new CountDownLatch(segs);
 
         final SegmentIo.CancelCheck cancel = new SegmentIo.CancelCheck() {
@@ -704,11 +734,16 @@ final class GameDownloader {
                             }
                             try {
                                 SegmentIo.fetch(task.url, UA, parts[idx], starts[idx],
-                                        lens[idx], done[idx], segs > 1, cancel, hook);
+                                        lens[idx], done[idx], segs > 1, cancel, hook,
+                                        total > 0);
                                 return;
                             } catch (SegmentIo.RangeUnsupported ru) {
                                 stop.set(true);
                                 task.rangeUnsupported = true;
+                                return;
+                            } catch (SegmentIo.SizeDiscovered sd) {
+                                stop.set(true);
+                                found.compareAndSet(null, Long.valueOf(sd.total));
                                 return;
                             } catch (Exception e) {
                                 if (task.cancelled || task.paused || stop.get()) {
@@ -745,6 +780,12 @@ final class GameDownloader {
                 latch.await(3, TimeUnit.SECONDS);
                 throw new SegmentIo.RangeUnsupported();
             }
+            if (found.get() != null) {
+                stop.set(true);
+                task.abort();
+                latch.await(3, TimeUnit.SECONDS);
+                throw new SegmentIo.SizeDiscovered(found.get().longValue());
+            }
             Exception e = err.get();
             if (e != null) {
                 task.abort();
@@ -756,7 +797,8 @@ final class GameDownloader {
                 sum += done[i].get();
             }
             task.lastDownloaded = sum;
-            task.lastTotal = total > 0 ? total : 0;
+            task.lastTotal = total > 0 ? total
+                    : (task.expectedTotal > 0 ? task.expectedTotal : 0);
 
             long now = SystemClock.elapsedRealtime();
             if (now - lastTick > 300) {
@@ -782,6 +824,9 @@ final class GameDownloader {
         }
         if (task.rangeUnsupported) {
             throw new SegmentIo.RangeUnsupported();
+        }
+        if (found.get() != null) {
+            throw new SegmentIo.SizeDiscovered(found.get().longValue());
         }
         Exception e = err.get();
         if (e != null) {
@@ -911,11 +956,24 @@ final class GameDownloader {
                                          long done, long total) {
         int pct = total > 0 ? (int) (done * 100 / total) : 0;
 
+        Task t = version == null ? null : RUNNING.get(version);
+        boolean estimated = t != null && t.totalEstimated;
+
         String text;
         if (version == null) {
             text = ctx.getString(R.string.title_download_page);
         } else {
-            String size = total > 0 ? fmt(done) + " / " + fmt(total) : fmt(done);
+            String size;
+            if (total > 0) {
+                size = fmt(done) + " / " + fmt(total);
+                if (estimated) {
+                    // 估出来的总量加个「约」，下完时不会显示 763/722MB 吓人
+                    size = fmt(done) + " / "
+                            + ctx.getString(R.string.fmt_about_size, fmt(total));
+                }
+            } else {
+                size = fmt(done);
+            }
             text = version + "  " + size;
         }
 

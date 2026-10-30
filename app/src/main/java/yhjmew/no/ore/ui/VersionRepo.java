@@ -55,6 +55,60 @@ final class VersionRepo {
         /** 网盘名 -> {架构 -> 链接}，目前只关心 OneDrive */
         JSONObject links;
 
+        /**
+         * 从 {@code file_size} 里估出总字节数。
+         *
+         * <p>字段长这样：{@code 713.69MB/722.51MB}，实测 1.26.52.3 的真实包是
+         * 757603304 字节 = 722.5MB —— 也就是**后一个**才是整包大小，
+         * 前一个大概是压缩后/实际下载量。取后一个。
+         *
+         * <p>用途：探测被限流、拿不到 Content-Length 时先拿它顶着，
+         * 让百分比能滚起来，不至于让用户对着「19.4 MB」和一个 0% 发呆。
+         *
+         * @return 字节数；解析不出来返回 -1
+         */
+        long estimatedTotalBytes() {
+            if (fileSize == null || fileSize.length() == 0) {
+                return -1;
+            }
+            String[] parts = fileSize.split("/");
+            String pick = parts[parts.length - 1].trim();
+            return parseHumanSize(pick);
+        }
+
+        /** "722.51MB" → 757603304 上下 */
+        private static long parseHumanSize(String s) {
+            if (s == null || s.length() == 0) {
+                return -1;
+            }
+            String t = s.trim().toUpperCase(java.util.Locale.US).replace(" ", "");
+            long mul;
+            String num;
+            if (t.endsWith("TB")) {
+                mul = 1024L * 1024 * 1024 * 1024;
+                num = t.substring(0, t.length() - 2);
+            } else if (t.endsWith("GB")) {
+                mul = 1024L * 1024 * 1024;
+                num = t.substring(0, t.length() - 2);
+            } else if (t.endsWith("MB")) {
+                mul = 1024L * 1024;
+                num = t.substring(0, t.length() - 2);
+            } else if (t.endsWith("KB")) {
+                mul = 1024L;
+                num = t.substring(0, t.length() - 2);
+            } else if (t.endsWith("B")) {
+                mul = 1L;
+                num = t.substring(0, t.length() - 1);
+            } else {
+                return -1;
+            }
+            try {
+                return (long) (Double.parseDouble(num) * mul);
+            } catch (Exception e) {
+                return -1;
+            }
+        }
+
         /** 排序用：把 1.26.60.4 变成可比较的整数序列 */
         long[] key() {
             String[] parts = (versionAll == null ? "" : versionAll).split("\\.");
@@ -116,6 +170,73 @@ final class VersionRepo {
                 callback.onResult(Collections.<Entry>emptyList(), null);
             }
         }).start();
+    }
+
+    /**
+     * 按**精确版本号**找一个条目。
+     *
+     * <p>不能直接用 {@link #searchOfficial} 然后取第一条：
+     * 查 "1.26.52.3" 时它第一个候选是模糊的 "26."，会返回整个大版本
+     * 的全部正式版（22 条），取第 0 条拿到的是 **1.26.60.4**。
+     * 拿它去续传，等于给 1.26.52.3 下了一份 1.26.60.4 的包。
+     *
+     * <p>这里先精确查，查不到再按大版本模糊查然后**按版本号过滤**。
+     */
+    static void findExact(final String versionAll, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String want = sanitizeQuery(versionAll);
+
+                for (String host : API_HOSTS) {
+                    // 1) 精确版本号（实测能命中单条时 message 是数组）
+                    try {
+                        String url = host + "/search_version?s="
+                                + URLEncoder.encode(want, "UTF-8") + "&b=0";
+                        Entry hit = pickExact(parseList(httpGet(url)), want);
+                        if (hit != null) {
+                            List<Entry> one = new ArrayList<Entry>();
+                            one.add(hit);
+                            callback.onResult(one, null);
+                            return;
+                        }
+                    } catch (Exception ignore) {
+                    }
+
+                    // 2) 退到"大版本模糊查 + 按版本号筛"
+                    String[] parts = want.split("\\.");
+                    if (parts.length >= 2) {
+                        try {
+                            String small = parts[1] + ".";
+                            String url = host + "/search_version?s="
+                                    + URLEncoder.encode(small, "UTF-8") + "&m=1&b=0";
+                            Entry hit = pickExact(parseList(httpGet(url)), want);
+                            if (hit != null) {
+                                List<Entry> one = new ArrayList<Entry>();
+                                one.add(hit);
+                                callback.onResult(one, null);
+                                return;
+                            }
+                        } catch (Exception ignore) {
+                        }
+                    }
+                }
+                callback.onResult(Collections.<Entry>emptyList(), null);
+            }
+        }).start();
+    }
+
+    /** 在结果里挑版本号完全一致的那条 */
+    private static Entry pickExact(List<Entry> list, String want) {
+        if (list == null) {
+            return null;
+        }
+        for (Entry e : list) {
+            if (e != null && want.equals(sanitizeQuery(e.versionAll))) {
+                return e;
+            }
+        }
+        return null;
     }
 
     /** 一次查询的各种等价写法，按命中率从高到低 */
