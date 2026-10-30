@@ -84,7 +84,7 @@ Tapping **OK** means you have read and understood the above.</string>
     <string name="msg_disclaimer_countdown">Please read the notice above. You can continue in %1$d s</string>
     <string name="msg_disclaimer_ready">You can continue now</string>
     <string name="btn_agree_continue">OK</string>
-    <string name="btn_dont_show_again">Don't show this again</string>
+    <string name="btn_dont_show_again">Don\'t show this again</string>
     <string name="msg_never_show_short">Hidden</string>
     <string name="msg_always_show_short">Shown</string>
     <string name="title_disclaimer_reset">Show notice again</string>
