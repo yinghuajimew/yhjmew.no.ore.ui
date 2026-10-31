@@ -1,26 +1,26 @@
 {
-  "version": "2.4",
-  "versionCode": 15,
+  "version": "2.5",
+  "versionCode": 16,
   "forceUpdate": false,
   "minVersion": "2.4",
   "changelog": {
-    "zh": "2.4:\n1. 两个 SO 全部更新到最新构建\n   - 独立版：修复第偶数次启动崩溃（去掉同步 hook，改后台线程 + 自验证）\n   - 独立版：修复 MC 升级后配置无法自愈（AutoFallback 曾被误关）\n   - 依赖版：补齐日志/崩溃现场/logcat 快照/设备信息头\n2. 两个 SO 均新增 1.26.60 特征码，覆盖 1.21.90 ~ 1.26.60\n3. SO 改为 16KB 页对齐，支持天玑 9400+ 等 16KB 页设备\n4. 修复国内下载源链接错误（文件名少了空格，导致 500）\n5. update.json 改为合法 JSON（换行符转义）",
-    "en": "2.4:\n1. Both SOs rebuilt from latest sources\n   - Standalone: fixed crash on even-numbered launches (sync hook -> background thread + self-verify)\n   - Standalone: fixed config never recovering after an MC update (AutoFallback was skipped)\n   - Dependent: added logging / native crash dump / logcat snapshot / device info header\n2. Both SOs now include the 1.26.60 signature; coverage 1.21.90 ~ 1.26.60\n3. SOs are now 16KB-page aligned (Dimensity 9400+ and similar)\n4. Fixed the domestic download source URL (missing spaces in filename caused HTTP 500)\n5. update.json is now valid JSON (escaped newlines)"
+    "zh": "2.5:\n1. 下载线程数可调：1 / 2 / 4 / 8 / 16 预设，或自定义 1~16，默认 4。填 1 表示不分段。改小时会自动清掉之前留下的多余分片\n2. 修下载完成后通知栏一直停在「正在合并文件」——先发完成通知再撤前台，撤的时候把新通知一起删了，顺序反了\n3. 自定义签名改成按钮：点一下直接弹出文件选择器，选完立即生效。之前是单选，选了还得再点「确定」才跳\n4. 修「自定义签名」打不开文件管理器：只给 application/octet-stream 时，Android 11+ 会把所有文件过滤掉（.bks 没有注册 MIME）。改走通配类型 + EXTRA_MIME_TYPES，并补 ACTION_OPEN_DOCUMENT 兜底\n5. 选签名后未切换签名类型的 bug 修复\n6. 新增使用前免责说明：正文可滚动、强制停留 10 秒、需手打「我已完整阅读确认」（逐字比对，不可粘贴），可勾「不再展示」\n7. 主界面按钮布局调整：「下载游戏」移到单独一行靠右，正对「共存处理」上方\n8. 繁中 / 港中翻译补齐：清除 20 处残留简体字，统一用语（簽章 / 執行緒 / 網路硬碟 / 連線數 / 支援）",
+    "en": "2.5:\n1. Download threads are configurable: presets 1 / 2 / 4 / 8 / 16, or a custom 1-16. Default 4; 1 disables splitting. Lowering it now cleans up leftover segments\n2. Fixed the notification staying on \"Merging files\" after the download finished (the done notification was replaced by the foreground teardown because the order was reversed)\n3. Custom signature is a button now: tapping opens the file picker directly and takes effect immediately. It used to be a radio option that required pressing OK afterwards\n4. Fixed the custom-signature picker not opening: application/octet-stream made Android 11+ filter out every file (.bks has no registered MIME). Now uses a wildcard type plus EXTRA_MIME_TYPES, with an ACTION_OPEN_DOCUMENT fallback\n5. Fixed the signature type not switching after a file was picked\n6. New pre-flight notice: scrollable, 10-second hold, and you must type the confirmation phrase exactly (paste is blocked). Can be dismissed permanently\n7. Home button layout: \"Download game\" moved to its own right-aligned row above \"Coexistence processing\"\n8. Traditional Chinese translation cleanup: 20 leftover simplified entries removed, terminology unified (簽章 / 執行緒 / 網路硬碟 / 連線數 / 支援)"
   },
   "downloadSources": [
     {
       "name": "GitHub",
-      "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.4/oreUI._2.4_yhjmew.no.ore.ui.apk",
+      "url": "https://github.com/yinghuajimew/yhjmew.no.ore.ui/releases/download/2.5/oreUI._2.5_yhjmew.no.ore.ui.apk",
       "region": "海外"
     },
     {
       "name": "Cloudflare",
-      "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.4_yhjmew.no.ore.ui.apk",
+      "url": "https://yhjmew-no-ore-ui.pages.dev/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.5_yhjmew.no.ore.ui.apk",
       "region": "国内外"
     },
     {
       "name": "zihao_il",
-      "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.4_yhjmew.no.ore.ui.apk",
+      "url": "https://openlist.endyun.ltd/d/not-oreui/%2C/f/apk/%E5%8E%BB%20oreUI%20%E6%89%93%E5%8C%85_2.5_yhjmew.no.ore.ui.apk",
       "region": "国内"
     }
   ]
