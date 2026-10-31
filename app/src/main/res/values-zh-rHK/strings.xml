@@ -12,7 +12,7 @@
     <string name="btn_install_later">稍後安裝</string>
     <string name="btn_download_now">立即下載</string>
     <string name="btn_download_game">下載遊戲</string>
-    <string name="title_pick_version">选择 Minecraft 版本</string>
+    <string name="title_pick_version">選擇 Minecraft 版本</string>
     <string name="hint_search_version">版本号，如 1.21 或 1.26.60</string>
     <string name="btn_search">搜索</string>
     <string name="msg_fetching_latest">正在获取最新版本...</string>
@@ -22,15 +22,15 @@
     <string name="msg_search_result">搜索结果</string>
     <string name="msg_official_versions">%1$s 正式版</string>
     <string name="msg_arch_arm64">64 位元（arm64-v8a）</string>
-    <string name="msg_no_version_found">没有找到 %1$s 的正式版</string>
-    <string name="msg_already_downloaded">已下载</string>
-    <string name="msg_partial_downloaded">已下载部分: </string>
-    <string name="msg_not_downloaded">未下载</string>
-    <string name="title_confirm_download">确认下载</string>
-    <string name="msg_confirm_download">下载 Minecraft %1$s（%2$s）？</string>
-    <string name="msg_confirm_resume">Minecraft %1$s 已下载 %2$s，继续下载？</string>
-    <string name="msg_confirm_redownload">Minecraft %1$s 已下载完成，重新下载？</string>
-    <string name="btn_open_download_page">下载列表</string>
+    <string name="msg_no_version_found">沒有找到 %1$s 的正式版</string>
+    <string name="msg_already_downloaded">已下載</string>
+    <string name="msg_partial_downloaded">已下載部分:</string>
+    <string name="msg_not_downloaded">未下載</string>
+    <string name="title_confirm_download">確認下載</string>
+    <string name="msg_confirm_download">下載 Minecraft %1$s（%2$s）？</string>
+    <string name="msg_confirm_resume">Minecraft %1$s 已下載 %2$s，繼續下載？</string>
+    <string name="msg_confirm_redownload">Minecraft %1$s 已下載完成，重新下載？</string>
+    <string name="btn_open_download_page">下載列表</string>
     <string name="title_download_page">已下載的檔案</string>
     <string name="msg_no_downloads">還沒有下載的檔案</string>
     <string name="msg_save_to">儲存位置:</string>
@@ -45,7 +45,7 @@
     <string name="title_choose_mode">處理這個安裝包</string>
     <string name="msg_download_dir_fallback">沒有儲存權限，已改為儲存到應用私有目錄</string>
     <string name="title_delete_download">刪除檔案</string>
-    <string name="msg_confirm_delete_download">删除 Minecraft %1$s？</string>
+    <string name="msg_confirm_delete_download">刪除 Minecraft %1$s？</string>
     <string name="msg_download_finished">下載完成: </string>
     <string name="msg_download_paused_label">已暫停</string>
     <string name="msg_dl_merging">正在合併檔案...</string>
@@ -53,23 +53,23 @@
     <string name="msg_dl_notif_expand_hint">展開可暫停</string>
     <string name="msg_dl_notif_done">下載完成</string>
     <string name="msg_dl_notif_failed">下載失敗</string>
-    <string name="title_download_threads">下載線程數</string>
-    <string name="msg_download_threads_hint">連接數不是越多越快，網盤會限流。預設 4 條；填 1 表示不分段。</string>
+    <string name="title_download_threads">下載執行緒數</string>
+    <string name="msg_download_threads_hint">連線數不是越多越快，網路硬碟會限流。預設 4 條；填 1 表示不分段。</string>
     <string name="hint_download_threads_custom">%1$d-%2$d</string>
     <string name="btn_threads_custom">自訂</string>
-    <string name="log_download_threads">下載線程數: </string>
+    <string name="log_download_threads">下載執行緒數:</string>
     <string name="err_threads_range">請輸入 %1$d ~ %2$d 之間的數字</string>
     <string name="title_disclaimer">使用前請先看完</string>
-    <string name="msg_disclaimer_body">本工具会拆开、改写并重新簽名 Minecraft 安裝包，输出到原包同目录。开始前請看完下面几条。\n\n① 先备份\n存檔、材质、光影、附加包、皮肤、設定，建议都複製一份到別處。\n\n② 簽名决定能不能直接覆蓋安装\n换簽名后系统会当成另一个應用程式，必须先卸載原版才能装，而卸載会删掉應用程式数据。\n用「共存处理」改成另一个包名，两个版本就能同时存在，不必卸載。\n\n③ 其他\n非官方工具，与 Mojang、微软无关。因使用本工具造成的存檔損壞、数据丢失、账号异常或裝置问题，請自行承担。\n游戏更新后补丁可能失效，需等待新版本的特征码。\n請勿把改过的包当作官方版本分发，或用于商業用途。\n\n點「確定」表示你已閱讀并理解以上内容。</string>
+    <string name="msg_disclaimer_body">本工具會拆開、改寫並重新簽章 Minecraft 安裝包，輸出到原包同目錄。開始前請看完下面幾條。\n\n① 先備份\n存檔、材質、光影、附加包、外觀、設定，建議都複製一份到別處。\n\n② 簽章決定能不能直接覆蓋安裝\n換簽章後系統會當成另一個應用，必須先移除原版才能裝，而移除會刪掉應用資料。\n用「共存處理」改成另一個包名，兩個版本就能同時存在，不必移除。\n\n③ 其他\n非官方工具，與 Mojang、微軟無關。因使用本工具造成的存檔損壞、資料遺失、帳號異常或裝置問題，請自行承擔。\n遊戲更新後補丁可能失效，需等待新版本的特徵碼。\n請勿把改過的包當作官方版本分發，或用於商業用途。\n\n點「確定」表示你已閱讀並理解以上內容。</string>
     <string name="msg_disclaimer_countdown">請先閱讀上面的說明，%1$d 秒後才能繼續</string>
     <string name="msg_disclaimer_ready">現在可以繼續了</string>
     <string name="btn_agree_continue">確定</string>
     <string name="btn_dont_show_again">不再顯示</string>
     <string name="msg_never_show_short">已隱藏</string>
     <string name="msg_always_show_short">會顯示</string>
-    <string name="btn_sign_custom_pick">自訂簽名（.bks）— 點擊選擇檔案</string>
-    <string name="btn_sign_custom_current">自訂簽名：%1$s — 點擊更換</string>
-    <string name="btn_sign_custom_switch">使用自訂簽名：%1$s</string>
+    <string name="btn_sign_custom_pick">自訂簽章（.bks）— 點擊選擇檔案</string>
+    <string name="btn_sign_custom_current">自訂簽章：%1$s — 點擊更換</string>
+    <string name="btn_sign_custom_switch">使用自訂簽章：%1$s</string>
     <string name="title_disclaimer_confirm">請輸入下面這句話才能繼續</string>
     <string name="msg_disclaimer_confirm_hint">上面這句話是圖片，故意做成不能複製的。請照著手動輸入，或用語音輸入 —— 差一個字都不行。</string>
     <string name="msg_disclaimer_phrase">我已完整閱讀確認</string>
@@ -81,14 +81,14 @@
     <string name="msg_disclaimer_reset_done">下次使用時會再提示一次</string>
     <string name="fmt_about_size">約 %1$s</string>
     <string name="msg_download_threads">%1$d 條連線</string>
-    <string name="err_version_too_old">只支持 Minecraft %1$s 及以上版本</string>
-    <string name="err_no_download_link">没有下载链接</string>
-    <string name="err_no_onedrive_link_hint">该版本没有 OneDrive 镜像。应用内只能走 OneDrive，其余网盘需登录或只能在各自 App 内下载。</string>
-    <string name="err_resume_lookup">获取版本信息失败，无法继续下载</string>
-    <string name="log_dl_resume_from">从断点继续: </string>
+    <string name="err_version_too_old">只支援 Minecraft %1$s 及以上版本</string>
+    <string name="err_no_download_link">沒有下載連結</string>
+    <string name="err_no_onedrive_link_hint">該版本沒有 OneDrive 鏡像。應用內只能走 OneDrive，其餘網路硬碟需登入或只能在各自 App 內下載。</string>
+    <string name="err_resume_lookup">獲取版本資訊失敗，無法繼續下載</string>
+    <string name="log_dl_resume_from">從斷點繼續:</string>
     <string name="log_dl_size_found">已確定大小: %1$s</string>
-    <string name="log_dl_no_resume">服务器不支持续传，重新下载</string>
-    <string name="err_dl_incomplete">下载不完整: </string>
+    <string name="log_dl_no_resume">伺服器不支援續傳，重新下載</string>
+    <string name="err_dl_incomplete">下載不完整:</string>
     <string name="btn_download_later">稍後提醒</string>
     <string name="btn_remind_later">稍後提醒</string>
     <string name="btn_remind_later_alt">稍後提醒</string>
@@ -159,11 +159,11 @@
     <string name="msg_need_storage">需要存儲權限，正在申請...</string>
     <string name="msg_about_title">No OreUI 工具&lt;br&gt;&lt;br&gt;</string>
     <string name="msg_about_purpose">用途：修改 Minecraft 安裝包，去除 OreUI 並恢復 jsonUI。&lt;br&gt;</string>
-    <string name="msg_about_support">支持：普通處理模式 與 自動共存模式。&lt;br&gt;</string>
-    <string name="msg_about_signature">簽章：支持多種簽章檔案切換。&lt;br&gt;&lt;br&gt;</string>
-    <string name="msg_about_qq">QQ羣：&lt;br&gt;</string>
+    <string name="msg_about_support">支援：普通處理模式 與 自動共存模式。&lt;br&gt;</string>
+    <string name="msg_about_signature">簽章：支援多種簽章檔案切換。&lt;br&gt;&lt;br&gt;</string>
+    <string name="msg_about_qq">QQ 群：&lt;br&gt;</string>
     <string name="msg_about_telegram">Telegram頻道：&lt;br&gt;</string>
-    <string name="msg_about_qq_link">&lt;a href="https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&amp;group_code=127681066"&gt;加入QQ羣&lt;/a&gt;&lt;br&gt;或長按複製QQ羣號: 127681066&lt;br&gt;</string>
+    <string name="msg_about_qq_link">&lt;a href="https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&amp;group_code=127681066"&gt;加入 QQ 群&lt;/a&gt;&lt;br&gt;或長按複製 QQ 群號: 127681066&lt;br&gt;</string>
     <string name="msg_about_telegram_link">&lt;a href="https://t.me/Minecraft_not_oreUI"&gt;Telegram頻道&lt;/a&gt;</string>
     <string name="msg_auto_check">（自動檢查）</string>
     <string name="msg_ask_sign_detail">請輸入簽章檔案的完整路徑、別名和密碼：</string>
@@ -187,7 +187,7 @@
     <string name="msg_settings_so">SO</string>
     <string name="msg_so_standalone">獨立版 SO</string>
     <string name="msg_so_preloader">依賴版 SO</string>
-    <string name="msg_so_standalone_desc">獨立版（不需要 libpreloader.so）安卓11級以後可用，支持1.21及以後版本</string>
+    <string name="msg_so_standalone_desc">獨立版（不需要 libpreloader.so）安卓 11 級以後可用，支援 1.21 及以後版本</string>
     <string name="msg_so_preloader_desc">依賴版（需要 libpreloader.so）所有安卓版本可用，支援 1.21 及以後版本</string>
     <string name="msg_update_content">更新內容:
 </string>
@@ -204,7 +204,7 @@
     <string name="log_current_signature">當前簽章:</string>
     <string name="log_current_so_type">當前 SO:</string>
     <string name="log_switched_to">✅ 已切換為:</string>
-    <string name="log_opening_sign_picker">正在打開簽章檔案選擇器（僅支持 .bks）...</string>
+    <string name="log_opening_sign_picker">正在打開簽章檔案選擇器（僅支援 .bks）...</string>
     <string name="log_sign_file_selected">已選擇簽章檔案:</string>
     <string name="log_sign_file_path">簽章檔案路徑:</string>
     <string name="log_sign_file_cached">簽章檔案已緩存:</string>
@@ -336,7 +336,7 @@
     <string name="err_custom_sign_missing">[簽章] 自訂簽章檔案不存在:</string>
     <string name="err_custom_sign_unset">[簽章] 未設定自訂簽章檔案路徑。請先在簽章設定中配置。</string>
     <string name="err_sign_path_empty">❌ 簽章檔案路徑不能為空。</string>
-    <string name="err_sign_need_bks">❌ 僅支持 .bks 格式的簽章檔案。
+    <string name="err_sign_need_bks">❌ 僅支援 .bks 格式的簽章檔案。
 當前檔案:</string>
     <string name="err_sign_size_0">[簽章] 簽章檔案大小為0字節:</string>
     <string name="err_sign_unreadable">[簽章] 無法讀取簽章檔案:</string>
