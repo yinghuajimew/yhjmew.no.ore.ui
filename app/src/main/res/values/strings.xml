@@ -70,6 +70,14 @@
     <string name="btn_sign_custom_pick">Custom signature (.bks) — tap to choose</string>
     <string name="btn_sign_custom_current">Custom: %1$s — tap to replace</string>
     <string name="btn_sign_custom_switch">Use custom signature: %1$s</string>
+    <string name="title_disclaimer_confirm">To continue, type this exactly</string>
+    <string name="msg_disclaimer_confirm_hint">The text above is an image on purpose, so it cannot be copied. Type it by hand or use voice input — one character off and it will be rejected.</string>
+    <string name="msg_disclaimer_phrase">I have fully read and confirmed</string>
+    <string name="msg_disclaimer_phrase_desc">Text you must type to continue</string>
+    <string name="hint_disclaimer_confirm">Type the text you see above</string>
+    <string name="err_disclaimer_need_input">Type the text above first</string>
+    <string name="err_disclaimer_mismatch">Not quite — check every character, including case and spaces</string>
+    <string name="err_disclaimer_pasted">That came from the clipboard. Please type it by hand or use voice input.</string>
     <string name="title_disclaimer_reset">Show notice again</string>
     <string name="msg_disclaimer_reset_done">The notice will be shown next time</string>
     <string name="fmt_about_size">~%1$s</string>
