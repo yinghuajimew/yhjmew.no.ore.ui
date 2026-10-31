@@ -56,6 +56,9 @@ public class MainActivity extends Activity {
     private String currentDetectedPackageName = DEFAULT_PKG_NAME;
     private int currentCloneMaxLength = Math.min(DEFAULT_PKG_NAME.length(), SO_PKG_MAX_LENGTH);
 
+    /** 设置弹窗里「自定义签名」按钮的刷新器；弹窗关掉后置空 */
+    private Runnable refreshCustomSignLabel;
+
     private SignatureManager signatureManager;
     private PackageDetector packageDetector;
     private ApkProcessor apkProcessor;
@@ -337,6 +340,12 @@ public class MainActivity extends Activity {
                 printLog(getString(R.string.log_switched_to)
                         + signatureManager.getSignDisplayName(
                         signatureManager.getCurrentSignType()));
+
+                // 设置弹窗可能还开着（用户是在弹窗里点的按钮），
+                // 这时把按钮文案换成新文件名，否则会一直显示旧的那个
+                if (refreshCustomSignLabel != null) {
+                    refreshCustomSignLabel.run();
+                }
                 showCustomSignInputDialog(signatureManager.getCustomSignFilePath());
             }
             return;
@@ -673,6 +682,8 @@ public class MainActivity extends Activity {
                         ? R.string.btn_sign_custom_current
                         : R.string.btn_sign_custom_switch, absName(path))
                         : getString(R.string.btn_sign_custom_pick));
+                // 选中态点一下是「换一个文件」，没选中是「切过去」，
+                // 所以两种状态的文案必须不一样，否则用户不知道点下去会发生什么
                 if (active && has) {
                     // 当前生效：黑底白字，和线程预设的选中态一致
                     tvCustomSign.setBackgroundColor(
@@ -688,9 +699,13 @@ public class MainActivity extends Activity {
         tvCustomSign.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // 已经选过就直接切过去，不用再挑一遍文件
                 String path = signatureManager.getCustomSignFilePath();
-                if (path != null && path.length() > 0) {
+                boolean has = path != null && path.length() > 0;
+                boolean active = signatureManager.getCurrentSignType()
+                        == SignatureManager.SIGN_TYPE_CUSTOM;
+
+                if (has && !active) {
+                    // 选过文件但还没切过去：切过去，不用再挑一遍
                     signatureManager.setCurrentSignType(SignatureManager.SIGN_TYPE_CUSTOM);
                     signatureManager.saveSignConfig();
                     signGroup.clearCheck();
@@ -698,16 +713,19 @@ public class MainActivity extends Activity {
                     printLog(getString(R.string.log_switched_to)
                             + signatureManager.getSignDisplayName(
                             signatureManager.getCurrentSignType()));
-                    // 想换一个文件？长按可以重选
                     return;
                 }
+
+                // 两种情况都去选文件：
+                //  - 还没选过（has == false）
+                //  - 正在用自定义签名（has && active）→ 用户是想换一个 bks
                 openSignFilePicker();
             }
         });
         tvCustomSign.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                // 长按总是重新选文件，方便换一个签名
+                // 长按总是重新选文件：没选中时也能直接换，不必先切过去
                 openSignFilePicker();
                 return true;
             }
@@ -717,17 +735,6 @@ public class MainActivity extends Activity {
             signGroup.check(signatureManager.getCurrentSignType());
         }
         refreshCustomSignLabel.run();
-
-        // 自定义签名当前路径，选第三项时给个提示
-        final String customPath = signatureManager.getCustomSignFilePath();
-        if (customPath != null && customPath.length() > 0) {
-            android.widget.TextView tvSignPath = new android.widget.TextView(this);
-            tvSignPath.setText(getString(R.string.log_sign_file_path) + customPath);
-            tvSignPath.setTextSize(11f);
-            tvSignPath.setTextColor(android.graphics.Color.parseColor("#888888"));
-            tvSignPath.setPadding(0, 0, 0, (int) (12 * density));
-            container.addView(tvSignPath);
-        }
 
         // ---------- 分隔线 ----------
         View divider = new View(this);
@@ -915,7 +922,7 @@ public class MainActivity extends Activity {
                     }
                 }));
 
-        new android.app.AlertDialog.Builder(this)
+        final android.app.AlertDialog settingsDialog = new android.app.AlertDialog.Builder(this)
                 .setTitle(getString(R.string.btn_settings))
                 .setView(scroll)
                 .setPositiveButton(getString(R.string.btn_ok), new android.content.DialogInterface.OnClickListener() {
@@ -966,7 +973,20 @@ public class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton(getString(R.string.btn_cancel), null)
-                .show();
+                .create();
+
+        // 选完签名文件回到 onActivityResult 时，弹窗已经关了，
+        // 但用户马上会再打开设置 —— 让刷新器跟着弹窗一起失效，
+        // 避免往已经 detach 的 View 上写字。
+        settingsDialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(android.content.DialogInterface dialog) {
+                MainActivity.this.refreshCustomSignLabel = null;
+            }
+        });
+
+        this.refreshCustomSignLabel = refreshCustomSignLabel;
+        settingsDialog.show();
     }
 
     /**

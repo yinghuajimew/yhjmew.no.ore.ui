@@ -68,7 +68,7 @@
     <string name="msg_never_show_short">Hidden</string>
     <string name="msg_always_show_short">Shown</string>
     <string name="btn_sign_custom_pick">Custom signature (.bks) — tap to choose</string>
-    <string name="btn_sign_custom_current">Custom signature: %1$s — tap to switch</string>
+    <string name="btn_sign_custom_current">Custom: %1$s — tap to replace</string>
     <string name="btn_sign_custom_switch">Use custom signature: %1$s</string>
     <string name="title_disclaimer_reset">Show notice again</string>
     <string name="msg_disclaimer_reset_done">The notice will be shown next time</string>

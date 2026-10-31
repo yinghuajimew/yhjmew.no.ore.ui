@@ -68,7 +68,7 @@
     <string name="msg_never_show_short">已隱藏</string>
     <string name="msg_always_show_short">會顯示</string>
     <string name="btn_sign_custom_pick">自訂簽名（.bks）— 點擊選擇檔案</string>
-    <string name="btn_sign_custom_current">自訂簽名：%1$s — 點擊切換</string>
+    <string name="btn_sign_custom_current">自訂簽名：%1$s — 點擊更換</string>
     <string name="btn_sign_custom_switch">使用自訂簽名：%1$s</string>
     <string name="title_disclaimer_reset">重新顯示提示</string>
     <string name="msg_disclaimer_reset_done">下次使用時會再提示一次</string>
