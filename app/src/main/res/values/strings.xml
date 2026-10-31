@@ -77,7 +77,6 @@
     <string name="hint_disclaimer_confirm">Type the text you see above</string>
     <string name="err_disclaimer_need_input">Type the text above first</string>
     <string name="err_disclaimer_mismatch">Not quite — check every character, including case and spaces</string>
-    <string name="err_disclaimer_pasted">That came from the clipboard. Please type it by hand or use voice input.</string>
     <string name="title_disclaimer_reset">Show notice again</string>
     <string name="msg_disclaimer_reset_done">The notice will be shown next time</string>
     <string name="fmt_about_size">~%1$s</string>

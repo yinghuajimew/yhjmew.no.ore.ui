@@ -77,7 +77,6 @@
     <string name="hint_disclaimer_confirm">照着上面的文字输入</string>
     <string name="err_disclaimer_need_input">请先输入上面的文字</string>
     <string name="err_disclaimer_mismatch">不对，请逐字核对（标点、空格都要一致）</string>
-    <string name="err_disclaimer_pasted">这是从剪贴板粘贴的。请手动输入或使用语音输入。</string>
     <string name="title_disclaimer_reset">重新显示提示</string>
     <string name="msg_disclaimer_reset_done">下次使用时会再提示一次</string>
     <string name="fmt_about_size">约 %1$s</string>

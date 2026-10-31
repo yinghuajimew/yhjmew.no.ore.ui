@@ -2,9 +2,6 @@ package yhjmew.no.ore.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -247,13 +244,6 @@ final class DisclaimerDialog {
                             tvError.setVisibility(View.VISIBLE);
                             return;
                         }
-                        if (equalsClipboard(activity, typed)) {
-                            // 内容对但来自剪贴板：不认，让人自己敲一遍
-                            tvError.setText(activity.getString(R.string.err_disclaimer_pasted));
-                            tvError.setVisibility(View.VISIBLE);
-                            return;
-                        }
-
                         if (cbDontShow.isChecked()) {
                             prefs(activity).edit().putBoolean(KEY_ACCEPTED, true).apply();
                         }
@@ -285,14 +275,16 @@ final class DisclaimerDialog {
     /**
      * 确认文字的输入框，贴/剪贴板一律不认。
      *
-     * <p>三道拦截：
+     * <p>两道拦截，都作用在「用户主动粘贴」这个动作上：
      * <ol>
      *   <li>长按不弹选择菜单（{@code setLongClickable(false)}）；</li>
-     *   <li>选择菜单里去掉「粘贴」项；</li>
      *   <li>{@link android.widget.EditText#onTextContextMenuItem} 是所有上下文菜单动作的
-     *       唯一入口，粘贴在这里被直接吃掉 —— 键盘自带的剪贴板栏走的是 IME 的
-     *       commitText，拦不到，所以提交时再比对一次剪贴板内容。</li>
+     *       唯一入口，粘贴在这里被直接吃掉；选择菜单里的「粘贴」项也一并摘掉。</li>
      * </ol>
+     *
+     * <p>**不做**「提交时比对剪贴板」这种检查：剪贴板里存的是内容，不是来源。
+     * 用户手打、语音输入、手写之后，只要剪贴板里恰好也是这句话（之前复制过、
+     * 输入法缓存过），就会被误判成粘贴 —— 正常人怎么都过不去。
      */
     private static EditText buildConfirmField(Activity activity, float dp) {
         EditText et = new EditText(activity) {
@@ -347,26 +339,6 @@ final class DisclaimerDialog {
             if (id == android.R.id.paste || id == android.R.id.pasteAsPlainText) {
                 menu.removeItem(id);
             }
-        }
-    }
-
-    /** 输入内容是否和当前剪贴板一模一样（键盘剪贴板栏粘贴过来的） */
-    private static boolean equalsClipboard(Activity activity, String text) {
-        try {
-            ClipboardManager cm =
-                    (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm == null || !cm.hasPrimaryClip()) {
-                return false;
-            }
-            ClipData clip = cm.getPrimaryClip();
-            if (clip == null || clip.getItemCount() == 0) {
-                return false;
-            }
-            CharSequence t = clip.getItemAt(0).coerceToText(activity);
-            return t != null && t.toString().trim().equals(text);
-        } catch (Throwable ignore) {
-            // 部分 ROM 在后台读剪贴板会抛异常，当作没粘贴处理
-            return false;
         }
     }
 
