@@ -72,7 +72,7 @@ Two modes:
 
 - **Normal processing** — keeps the original package name, so it replaces the installed Minecraft.
 - **Coexistence processing** — renames the package (e.g. `com.mojang.minecraftpe2`), so the patched
-  build installs **alongside** the untouched one. Both share the same world folder.
+  build installs **alongside** the untouched one.
 
 ## 🚀 Getting started
 

@@ -26,8 +26,7 @@ The big one: the app now fetches the game for you, and the patching side got a l
 - **Configurable thread count.** Presets `1 / 2 / 4 / 8 / 16` plus a custom 1–16, default 4.
   Setting 1 disables splitting entirely.
 - **English / 简体中文 / 繁體中文**, following the system locale by default.
-- **Coexistence build** can now be installed alongside the untouched game, sharing the same world
-  folder.
+- **Coexistence build** can now be installed alongside the untouched game.
 
 ### Fixed
 
