@@ -28,7 +28,7 @@ English · [中文](./README.zh-CN.md) · [Change log](./CHANGELOG.md)
 
 > [!WARNING]
 > This is an **unofficial** tool. It repackages and re-signs a Minecraft installation package.
-> Do not report problems caused by it to Mojang or Microsoft, and do not use it on accounts you care about losing.
+> Do not report problems caused by it to Mojang or Microsoft.
 
 > [!TIP]
 > **The app does the work for you.** You do not need a PC, a decompiler, or a text editor —
